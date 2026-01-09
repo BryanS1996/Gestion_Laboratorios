@@ -4,7 +4,9 @@ import {
   Mail,
   Shield,
   RefreshCw,
-  LogOut
+  LogOut,
+  Trash2,
+  Save
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -12,8 +14,58 @@ import { useDashboard } from '../../hooks/useDashboard.js';
 
 const Users = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, jwtToken } = useAuth();
   const { usuarios, loading, error, refetch } = useDashboard(5000);
+
+  const [roleEdits, setRoleEdits] = useState({}); // uid -> role
+  const [busy, setBusy] = useState({}); // uid -> boolean
+
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  const setRoleFor = (uid, role) => {
+    setRoleEdits((prev) => ({ ...prev, [uid]: role }));
+  };
+
+  const saveRole = async (uid) => {
+    const newRole = roleEdits[uid];
+    if (!newRole) return;
+    try {
+      setBusy((p) => ({ ...p, [uid]: true }));
+      const res = await fetch(`${API_URL}/users/change-role/${uid}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({ newRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error cambiando rol');
+      await refetch();
+    } catch (e) {
+      alert(`❌ ${e.message}`);
+    } finally {
+      setBusy((p) => ({ ...p, [uid]: false }));
+    }
+  };
+
+  const deleteUser = async (uid, email) => {
+    if (!confirm(`¿Eliminar el usuario ${email || uid}?\nEsta acción no se puede deshacer.`)) return;
+    try {
+      setBusy((p) => ({ ...p, [uid]: true }));
+      const res = await fetch(`${API_URL}/users/${uid}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${jwtToken}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error eliminando usuario');
+      await refetch();
+    } catch (e) {
+      alert(`❌ ${e.message}`);
+    } finally {
+      setBusy((p) => ({ ...p, [uid]: false }));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
@@ -101,10 +153,12 @@ const Users = () => {
                     <th className="p-4 font-semibold border-b border-slate-200">UID</th>
                     <th className="p-4 font-semibold border-b border-slate-200">Nombre</th>
                     <th className="p-4 font-semibold border-b border-slate-200">Email</th>
+                    <th className="p-4 font-semibold border-b border-slate-200">Rol</th>
                     <th className="p-4 font-semibold border-b border-slate-200">Email Verificado</th>
                     <th className="p-4 font-semibold border-b border-slate-200">Fecha de Creación</th>
                     <th className="p-4 font-semibold border-b border-slate-200">Último Login</th>
                     <th className="p-4 font-semibold border-b border-slate-200">Estado</th>
+                    <th className="p-4 font-semibold border-b border-slate-200 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -118,6 +172,20 @@ const Users = () => {
                         <div className="flex items-center gap-2">
                           <Mail size={16} className="text-slate-400" />
                           {user.email}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Shield size={16} className="text-slate-400" />
+                          <select
+                            value={roleEdits[user.uid] ?? (user.role || 'student')}
+                            onChange={(e) => setRoleFor(user.uid, e.target.value)}
+                            className="px-2 py-1 rounded-lg border border-slate-200 bg-white text-sm"
+                          >
+                            <option value="admin">admin</option>
+                            <option value="professor">professor</option>
+                            <option value="student">student</option>
+                          </select>
                         </div>
                       </td>
                       <td className="p-4">
@@ -153,6 +221,27 @@ const Users = () => {
                             Activo
                           </span>
                         )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => saveRole(user.uid)}
+                            disabled={busy[user.uid] || roleEdits[user.uid] == null}
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-sm disabled:opacity-50"
+                            title="Guardar rol"
+                          >
+                            <Save size={18} />
+                            Guardar
+                          </button>
+                          <button
+                            onClick={() => deleteUser(user.uid, user.email)}
+                            disabled={busy[user.uid]}
+                            className="p-2 rounded-xl border border-slate-200 hover:bg-red-50 text-red-600 disabled:opacity-50"
+                            title="Eliminar usuario"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

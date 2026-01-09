@@ -1,29 +1,49 @@
-const admin = require('../firebaseAdmin');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
-const protectRoute = (allowedRoles) => {
-  return async (req, res, next) => {
-    // 1. Buscamos el token en la cabecera
-    const token = req.headers.authorization?.split('Bearer ')[1];
-    
-    if (!token) return res.status(401).json({ error: 'No autorizado: Falta token' });
+/**
+ * Middleware de protección por JWT (emitido por este backend).
+ *
+ * Uso:
+ *  - authMiddleware() => solo autenticación (cualquier rol)
+ *  - authMiddleware(['admin']) => autenticación + roles permitidos
+ */
+const authMiddleware = (allowedRoles = []) => {
+  return (req, res, next) => {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+    if (!token) {
+      return res.status(401).json({ error: 'No autorizado: Falta token' });
+    }
 
     try {
-      // 2. Verificamos que el token sea real
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      const userRole = decodedToken.role || 'user'; // Si no tiene rol, es user
+      const jwtSecret = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
+      const decoded = jwt.verify(token, jwtSecret);
 
-      // 3. Verificamos si el rol tiene permiso para entrar
-      if (allowedRoles.includes(userRole)) {
-        req.user = decodedToken; // Guardamos info del usuario
-        next(); // ¡Pasa!
-      } else {
-        res.status(403).json({ error: 'Prohibido: No tienes permisos suficientes' });
+      // Normalizamos campos esperados
+      req.user = {
+        uid: decoded.uid,
+        email: decoded.email,
+        role: decoded.role,
+        displayName: decoded.displayName,
+      };
+
+      // Si no se especifican roles, basta con estar autenticado
+      if (!allowedRoles || allowedRoles.length === 0) {
+        return next();
       }
+
+      if (!req.user.role || !allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ error: 'Prohibido: No tienes permisos suficientes' });
+      }
+
+      return next();
     } catch (error) {
-      console.error('Error de autenticación:', error);
-      res.status(401).json({ error: 'Token inválido o expirado' });
+      console.error('Error de autenticación JWT:', error.message);
+      return res.status(401).json({ error: 'Token inválido o expirado' });
     }
   };
 };
 
-module.exports = protectRoute;
+module.exports = authMiddleware;

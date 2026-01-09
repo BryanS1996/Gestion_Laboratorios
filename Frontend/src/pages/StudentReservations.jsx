@@ -1,30 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const StudentReservations = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Mock data de reservas - En producción, obtener del backend
-  const mockReservations = [
-    {
-      id: 1,
-      labName: 'Laboratorio de Computación',
-      date: '2026-01-10',
-      time: '10:00',
-      duration: 2,
-      status: 'Confirmada'
-    },
-    {
-      id: 2,
-      labName: 'Laboratorio de Redes',
-      date: '2026-01-12',
-      time: '14:00',
-      duration: 1,
-      status: 'Pendiente'
-    }
-  ];
+  const { jwtToken } = useAuth();
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!jwtToken) return;
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_URL}/reservas/mine`, {
+          headers: { Authorization: `Bearer ${jwtToken}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error cargando reservas');
+        setReservations((data.reservas || []).map((r) => ({
+          ...r,
+          labName: r.laboratorioNombre || r.laboratorioId,
+          date: r.fecha?.seconds ? new Date(r.fecha.seconds * 1000).toISOString().split('T')[0] : (typeof r.fecha === 'string' ? r.fecha : ''),
+          time: `${String(r.horaInicio).padStart(2,'0')}:00`,
+          duration: r.horaFin - r.horaInicio,
+          status: r.estado === 'confirmada' ? 'Confirmada' : (r.estado === 'pendiente' ? 'Pendiente' : 'Cancelada'),
+        })));
+        setError(null);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [jwtToken]);
 
   if (!user || user.role !== 'student') {
     return (
@@ -81,7 +96,7 @@ const StudentReservations = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {mockReservations.map((reservation) => (
+              {reservations.map((reservation) => (
                 <tr key={reservation.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                     {reservation.labName}
@@ -99,13 +114,32 @@ const StudentReservations = () => {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       reservation.status === 'Confirmada'
                         ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                        : reservation.status === 'Cancelada'
+                          ? 'bg-slate-100 text-slate-700'
+                          : 'bg-yellow-100 text-yellow-800'
                     }`}>
                       {reservation.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    <button className="text-red-600 hover:text-red-900 mr-2">Cancelar</button>
+                    <button
+                      className="text-red-600 hover:text-red-900 mr-2"
+                      onClick={async () => {
+                        try {
+                          const resp = await fetch(`${API_URL}/reservas/${reservation.id}/cancel`, {
+                            method: 'PATCH',
+                            headers: { Authorization: `Bearer ${jwtToken}` },
+                          });
+                          const d = await resp.json();
+                          if (!resp.ok) throw new Error(d.error || 'Error cancelando');
+                          setReservations((prev) => prev.map((p) => p.id === reservation.id ? { ...p, status: 'Cancelada' } : p));
+                        } catch (e) {
+                          alert(e.message);
+                        }
+                      }}
+                    >
+                      Cancelar
+                    </button>
                     <button className="text-blue-600 hover:text-blue-900">Editar</button>
                   </td>
                 </tr>
@@ -114,7 +148,10 @@ const StudentReservations = () => {
           </table>
         </div>
 
-        {mockReservations.length === 0 && (
+        {loading && <p className="text-slate-500 mt-4">Cargando reservas...</p>}
+        {error && <p className="text-red-600 mt-4">{error}</p>}
+
+        {!loading && reservations.length === 0 && (
           <div className="text-center py-12">
             <p className="text-slate-500 text-lg">No tienes reservas activas.</p>
             <button

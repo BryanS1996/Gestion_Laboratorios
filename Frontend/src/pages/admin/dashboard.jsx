@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { 
   LayoutDashboard, 
-  Box, 
   Users, 
   Settings, 
   Calendar, 
@@ -44,7 +43,6 @@ const AdminDashboard = () => {
 
         <nav className="flex-1 px-4 space-y-2 mt-4">
           <NavItem icon={LayoutDashboard} label="Dashboard" active onClick={() => navigate('/admin/dashboard')} />
-          <NavItem icon={Box} label="Inventario" onClick={() => navigate('/admin/inventario')} />
           <NavItem icon={Users} label="Usuarios" onClick={() => navigate('/admin/usuarios')} />
           <NavItem icon={Settings} label="Configuración" onClick={() => navigate('/admin/configuracion')} />
         </nav>
@@ -218,7 +216,7 @@ const AdminDashboard = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {usuarios.map((user) => (
-                      <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={user.uid || user.email} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-4 font-medium text-slate-700">{user.displayName}</td>
                         <td className="p-4 text-slate-600">
                           <div className="flex items-center gap-2">
@@ -250,6 +248,45 @@ const AdminDashboard = () => {
 };
 
 // Componente para badge de rol
+const RoleBadge = ({ role }) => {
+  const r = (role || '').toLowerCase();
+
+  const stylesByRole = {
+    admin: {
+      label: 'Admin',
+      cls: 'bg-purple-100 text-purple-700 border-purple-200',
+      dot: 'bg-purple-500',
+    },
+    professor: {
+      label: 'Profesor',
+      cls: 'bg-blue-100 text-blue-700 border-blue-200',
+      dot: 'bg-blue-500',
+    },
+    estudiante: {
+      label: 'Estudiante',
+      cls: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      dot: 'bg-emerald-500',
+    },
+    student: {
+      label: 'Estudiante',
+      cls: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      dot: 'bg-emerald-500',
+    },
+  };
+
+  const st = stylesByRole[r] || {
+    label: role || 'Usuario',
+    cls: 'bg-slate-100 text-slate-700 border-slate-200',
+    dot: 'bg-slate-400',
+  };
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${st.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+      {st.label}
+    </span>
+  );
+};
 
 // Componente pequeño para los items del menú
 const NavItem = ({ icon: Icon, label, active, onClick }) => (

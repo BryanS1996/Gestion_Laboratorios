@@ -2,22 +2,17 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Mock controller - a implementar
-const adminController = {
-  getDashboard: (req, res) => {
-    res.json({ message: 'Dashboard de administrador', data: {} });
-  },
-  getAllUsers: (req, res) => {
-    res.json({ message: 'Lista de usuarios', data: [] });
-  },
-  getStats: (req, res) => {
-    res.json({ message: 'Estadísticas', data: {} });
-  }
-};
+const {
+  listReservas,
+  updateReserva,
+  deleteReserva,
+} = require('../controllers/adminReservationsController');
 
-// Rutas - solo acceso de admin
-router.get('/dashboard', authMiddleware(['admin']), adminController.getDashboard);
-router.get('/users', authMiddleware(['admin']), adminController.getAllUsers);
-router.get('/stats', authMiddleware(['admin']), adminController.getStats);
+// ✅ Rutas de administración (solo admin)
+
+// Reservas: listar / editar / eliminar
+router.get('/reservas', authMiddleware(['admin']), listReservas);
+router.patch('/reservas/:id', authMiddleware(['admin']), updateReserva);
+router.delete('/reservas/:id', authMiddleware(['admin']), deleteReserva);
 
 module.exports = router;

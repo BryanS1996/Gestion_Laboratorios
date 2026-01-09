@@ -18,4 +18,7 @@ router.put('/profile', protectRoute(['admin', 'professor', 'student']), userCont
 // 🔧 Cambiar rol de usuario (solo admin)
 router.put('/change-role/:uid', protectRoute(['admin']), userController.changeUserRole);
 
+// 🗑️ Eliminar usuario (solo admin)
+router.delete('/:uid', protectRoute(['admin']), userController.deleteUser);
+
 module.exports = router;

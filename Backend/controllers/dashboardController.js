@@ -147,11 +147,23 @@ const getReportes = async (req, res) => {
   try {
     const { estado = 'pendiente', limite = 10 } = req.query;
 
-    const snapshot = await db.collection('reportes')
-      .where('estado', '==', estado)
-      .orderBy('createdAt', 'desc')
-      .limit(parseInt(limite))
-      .get();
+    // ⚠️ Firestore puede requerir un índice compuesto para (where estado + orderBy createdAt).
+    // Para que el dashboard no "reviente" en proyectos nuevos (sin índices / sin createdAt),
+    // intentamos primero con orderBy y si falla, hacemos fallback sin orderBy.
+    let snapshot;
+    try {
+      snapshot = await db.collection('reportes')
+        .where('estado', '==', estado)
+        .orderBy('createdAt', 'desc')
+        .limit(parseInt(limite))
+        .get();
+    } catch (err) {
+      console.warn('Fallback getReportes sin orderBy (probable índice faltante):', err?.message);
+      snapshot = await db.collection('reportes')
+        .where('estado', '==', estado)
+        .limit(parseInt(limite))
+        .get();
+    }
 
     const reportes = snapshot.docs.map(doc => ({
       id: doc.id,

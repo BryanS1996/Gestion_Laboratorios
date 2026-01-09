@@ -3,7 +3,9 @@ import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import AdminDashboard from '../pages/admin/dashboard';
 import Users from '../pages/admin/Users';
+import Configuracion from '../pages/admin/Configuracion';
 import Catalog from '../pages/Catalog';
+import StudentReservations from '../pages/StudentReservations';
 import ProtectedRoute from './ProtectedRoute';
 
 const AppRoutes = () => {
@@ -37,6 +39,15 @@ const AppRoutes = () => {
         }
       />
 
+      <Route
+        path="/admin/configuracion"
+        element={
+          <ProtectedRoute requiredRole="admin">
+            <Configuracion />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Ruta por defecto para /admin redirige al dashboard */}
       <Route
         path="/admin"
@@ -49,6 +60,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Catalog />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Mis reservas (solo student) */}
+      <Route
+        path="/mis-reservas"
+        element={
+          <ProtectedRoute requiredRole="student">
+            <StudentReservations />
           </ProtectedRoute>
         }
       />

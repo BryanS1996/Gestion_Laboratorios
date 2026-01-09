@@ -187,7 +187,8 @@ const changeUserRole = async (req, res) => {
     return res.status(403).json({ error: 'Solo administradores pueden cambiar roles' });
   }
 
-  const { uid, newRole } = req.body;
+  const uid = req.params.uid || req.body.uid;
+  const newRole = req.body.newRole;
   const validRoles = ['admin', 'professor', 'student'];
 
   if (!validRoles.includes(newRole)) {
@@ -207,4 +208,27 @@ const changeUserRole = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, login, getProfile, updateProfile, changeUserRole };
+// 🗑️ Eliminar usuario (Solo admin) - borra en Firebase Auth y Firestore
+const deleteUser = async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Solo administradores pueden eliminar usuarios' });
+  }
+
+  const { uid } = req.params;
+  if (!uid) return res.status(400).json({ error: 'uid es requerido' });
+
+  try {
+    // 1) Borrar en Firebase Auth
+    await admin.auth().deleteUser(uid);
+
+    // 2) Borrar perfil en Firestore
+    await db.collection('users').doc(uid).delete();
+
+    return res.status(200).json({ message: 'Usuario eliminado' });
+  } catch (error) {
+    console.error('Error eliminando usuario:', error);
+    return res.status(500).json({ error: 'Error al eliminar usuario' });
+  }
+};
+
+module.exports = { registerUser, login, getProfile, updateProfile, changeUserRole, deleteUser };
