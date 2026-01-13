@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: ./Backend
+    container_name: gestion_backend
+    env_file:
+      - ./Backend/.env
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      args:
+        # El frontend hablará a /api (Nginx lo proxya al backend)
+        VITE_API_URL: /api
+    container_name: gestion_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -77,19 +77,47 @@ const Configuracion = () => {
   const fmtFecha = (f) => {
     try {
       const d = f?.toDate ? f.toDate() : f;
+      // Validación extra por si es timestamp numérico de firebase sin toDate
+      if (f?.seconds) return new Date(f.seconds * 1000).toLocaleDateString('es-ES');
       return d ? new Date(d).toLocaleDateString('es-ES') : 'N/A';
     } catch {
       return 'N/A';
     }
   };
 
+  // --- AQUÍ ESTÁ LA CORRECCIÓN DE SEGURIDAD ---
   const openEdit = (r) => {
-    const dateValue = (() => {
-      const d = r.fecha?.toDate ? r.fecha.toDate() : r.fecha;
-      if (!d) return '';
-      const dd = new Date(d);
-      return dd.toISOString().split('T')[0];
-    })();
+    let dateValue = '';
+
+    try {
+      // 1. Si no hay fecha, poner la de hoy
+      if (!r.fecha) {
+        dateValue = new Date().toISOString().split('T')[0];
+      }
+      // 2. Si es objeto Firebase/Firestore (tiene .seconds)
+      else if (r.fecha.seconds) {
+        dateValue = new Date(r.fecha.seconds * 1000).toISOString().split('T')[0];
+      }
+      // 3. Si tiene método .toDate() (objeto Firestore clásico en cliente)
+      else if (typeof r.fecha.toDate === 'function') {
+        dateValue = r.fecha.toDate().toISOString().split('T')[0];
+      }
+      // 4. Si es string o Date estándar
+      else {
+        const d = new Date(r.fecha);
+        // Verificar si es una fecha válida antes de hacer toISOString
+        if (isNaN(d.getTime())) {
+            console.warn("Fecha inválida detectada, usando fecha actual:", r.fecha);
+            dateValue = new Date().toISOString().split('T')[0];
+        } else {
+            dateValue = d.toISOString().split('T')[0];
+        }
+      }
+    } catch (error) {
+      console.error("Error procesando fecha en openEdit:", error);
+      // Fallback de seguridad definitivo: fecha de hoy
+      dateValue = new Date().toISOString().split('T')[0];
+    }
 
     setEditing({
       ...r,
@@ -99,6 +127,7 @@ const Configuracion = () => {
       _estado: r.estado || 'confirmada',
     });
   };
+  // ---------------------------------------------
 
   const saveEdit = async () => {
     if (!editing) return;

@@ -127,6 +127,7 @@ const Catalog = () => {
     openModalFor(lab);
   };
 
+  // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
   const handleReserve = async (reservationData) => {
     try {
       const res = await fetch(`${API_URL}/reservas`, {
@@ -138,13 +139,26 @@ const Catalog = () => {
         body: JSON.stringify(reservationData),
       });
       const data = await res.json();
+      
       if (!res.ok) throw new Error(data.error || 'Error creando reserva');
-      alert('✅ Reserva confirmada');
+
+      // 1. Cerramos el modal actual
+      setModalOpen(false);
+
+      // 2. Redirigimos a "Mis Reservas" pasando los datos de la reserva creada
+      navigate('/mis-reservas', { 
+        state: { 
+          reservationCreated: true, 
+          reservationData: reservationData // Enviamos los datos para mostrarlos en el modal verde
+        } 
+      });
+
     } catch (e) {
       alert(`❌ ${e.message}`);
       throw e;
     }
   };
+  // -------------------------------------
 
   if (loading) {
     return (
@@ -343,7 +357,7 @@ const Catalog = () => {
         lab={selectedLab}
         onReserve={handleReserve}
         jwtToken={jwtToken}
-        defaultDate={fecha} // por si tu modal lo usa
+        defaultDate={fecha}
       />
     </div>
   );
