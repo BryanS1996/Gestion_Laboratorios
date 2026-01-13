@@ -8,37 +8,81 @@ import {
 } from 'firebase/auth';
 import auth from '../firebase.js';
 
-// Función auxiliar para determinar rol basado en email
-const getUserRole = (email) => {
-  if (!email) return 'user';
-  const emailLower = email.toLowerCase();
-  
-  if (emailLower.includes('admin')) return 'admin';
-  if (emailLower.includes('profe') || emailLower.includes('profesor')) return 'professor';
-  if (emailLower.includes('est') || emailLower.includes('student')) return 'student';
-  
-  return 'user'; // Rol por defecto
-};
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+console.log('🔗 API URL configurada:', API_URL);
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(null);
+  const [jwtToken, setJwtToken] = useState(localStorage.getItem('jwtToken'));
+  const [error, setError] = useState(null);
 
+  // 🔐 Sincronizar JWT con localStorage
   useEffect(() => {
+    if (jwtToken) {
+      localStorage.setItem('jwtToken', jwtToken);
+    } else {
+      localStorage.removeItem('jwtToken');
+    }
+  }, [jwtToken]);
+
+  // 🔐 Monitorear cambios de autenticación en Firebase
+  useEffect(() => {
+    console.log('📡 Configurando onAuthStateChanged...');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('🔐 onAuthStateChanged disparado. Usuario:', firebaseUser?.email || 'ninguno');
+      
       if (firebaseUser) {
-        const idToken = await firebaseUser.getIdToken();
-        setToken(idToken);
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          role: getUserRole(firebaseUser.email) // Determinar rol basado en email
-        });
+        try {
+          // Obtener ID Token de Firebase
+          const idToken = await firebaseUser.getIdToken();
+          console.log('✅ Firebase ID Token obtenido');
+
+          // Enviar al backend para obtener JWT propio
+          console.log('📤 Enviando al backend:', `${API_URL}/users/login`);
+          
+          // Agregar timeout de 10 segundos
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+          const response = await fetch(`${API_URL}/users/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ JWT recibido del backend:', data.user);
+            setJwtToken(data.token);
+            setUser(data.user);
+            setError(null);
+          } else {
+            const errorText = await response.text();
+            console.error('❌ Error en login:', response.status, errorText);
+            setError(`Error: ${response.status} - ${errorText}`);
+            setUser(null);
+            setJwtToken(null);
+          }
+        } catch (error) {
+          if (error.name === 'AbortError') {
+            console.error('❌ Timeout: El servidor no respondió');
+            setError('Timeout: El servidor no respondió (verifica que está corriendo)');
+          } else {
+            console.error('❌ Error obteniendo JWT:', error.message);
+            setError(`Error de conexión: ${error.message}`);
+          }
+          setUser(null);
+          setJwtToken(null);
+        }
       } else {
+        console.log('🚪 Usuario deslogueado');
         setUser(null);
-        setToken(null);
+        setJwtToken(null);
       }
       setLoading(false);
     });
@@ -46,46 +90,120 @@ export const useAuth = () => {
     return () => unsubscribe();
   }, []);
 
+  // 🔐 Login con email y password
   const login = async (email, password) => {
-    await signInWithEmailAndPassword(auth, email, password);
-    // Firebase maneja el estado automáticamente via onAuthStateChanged
-  };
-
-  const register = async (email, password, name) => {
+    console.log('🔐 Intentando login con:', email);
+    setLoading(true);
+    setError(null);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      // Opcional: actualizar displayName
-      await user.updateProfile({ displayName: name });
-      const role = getUserRole(user.email);
-      return { user, role };
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('✅ Firebase login exitoso:', result.user.email);
+      // Firebase Auth dispara onAuthStateChanged automáticamente
+      return result.user;
     } catch (error) {
-      throw error;
+      console.error('❌ Error Firebase login:', error.message);
+      setError(error.message);
+      setLoading(false);
+      throw new Error(error.message);
     }
   };
 
+  // 📝 Registro de nuevo usuario
+  const register = async (email, password, displayName) => {
+    console.log('📝 Intentando registrar:', email);
+    setLoading(true);
+    setError(null);
+    try {
+      // 1. Crear usuario en Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      console.log('✅ Usuario creado en Firebase:', firebaseUser.uid);
+
+      // 2. Obtener Firebase ID Token
+      const idToken = await firebaseUser.getIdToken();
+
+      // 3. Registrar en backend (crear documento en Firestore con rol detectado)
+      console.log('📤 Enviando al backend para registrar en Firestore');
+      const response = await fetch(`${API_URL}/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email, 
+          password,
+          displayName
+          // El backend detectará el rol del email automáticamente
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error registrando usuario en el servidor');
+      }
+
+      const registerData = await response.json();
+      console.log('✅ Usuario registrado en backend. Rol:', registerData.user.role);
+
+      // 4. Hacer login automáticamente
+      const loginResponse = await fetch(`${API_URL}/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+
+      if (loginResponse.ok) {
+        const data = await loginResponse.json();
+        console.log('✅ JWT obtenido después del registro');
+        setJwtToken(data.token);
+        setUser(data.user);
+      }
+
+      return firebaseUser;
+    } catch (error) {
+      console.error('❌ Error en registro:', error.message);
+      setError(error.message);
+      setLoading(false);
+      throw new Error(error.message);
+    }
+  };
+
+  // 🔐 Reset de password
   const resetPassword = async (email) => {
+    console.log('🔐 Reset password para:', email);
     try {
       await sendPasswordResetEmail(auth, email);
+      console.log('✅ Email de reset enviado');
     } catch (error) {
-      throw error;
+      console.error('❌ Error reset password:', error.message);
+      setError(error.message);
+      throw new Error(error.message);
     }
   };
 
+  // 🚪 Logout
   const logout = async () => {
-    await signOut(auth);
+    console.log('🚪 Logout...');
+    try {
+      await signOut(auth);
+      setUser(null);
+      setJwtToken(null);
+      setError(null);
+      console.log('✅ Logout exitoso');
+    } catch (error) {
+      console.error('❌ Error logout:', error.message);
+      setError(error.message);
+      throw new Error(error.message);
+    }
   };
-
-  const getToken = () => token;
 
   return {
     user,
     loading,
+    jwtToken,
+    error,
     login,
     register,
     resetPassword,
     logout,
-    isAuthenticated: !!user,
-    token: getToken,
+    isAuthenticated: !!user
   };
 };
