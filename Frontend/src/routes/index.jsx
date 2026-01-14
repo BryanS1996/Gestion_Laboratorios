@@ -7,6 +7,7 @@ import Configuracion from '../pages/admin/Configuracion';
 import Catalog from '../pages/Catalog';
 import StudentReservations from '../pages/StudentReservations';
 import ProtectedRoute from './ProtectedRoute';
+import Reportes from '../pages/Reportes'; // ✅ Ya lo tenías importado
 
 const AppRoutes = () => {
   return (
@@ -70,6 +71,16 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requiredRole="student">
             <StudentReservations />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ✅ NUEVA RUTA: REPORTES (Agrega esto) */}
+      <Route
+        path="/reportes"
+        element={
+          <ProtectedRoute requiredRole="student">
+            <Reportes />
           </ProtectedRoute>
         }
       />

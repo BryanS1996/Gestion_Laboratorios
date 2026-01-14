@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertTriangle, X, Send } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -12,9 +12,13 @@ const StudentReservations = () => {
 
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   
+  // Modales
   const [newReservationDetails, setNewReservationDetails] = useState(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [selectedReserva, setSelectedReserva] = useState(null);
+  const [reportForm, setReportForm] = useState({ titulo: '', descripcion: '' });
+  const [sendingReport, setSendingReport] = useState(false);
 
   useEffect(() => {
     if (location.state?.reservationCreated) {
@@ -23,202 +27,188 @@ const StudentReservations = () => {
     }
   }, [location]);
 
-  // --- FUNCIÓN CORREGIDA PARA MOSTRAR LA FECHA DE RESERVA EXACTA ---
+  // --- 1. FUNCIÓN DE FECHAS (IMPORTANTE) ---
   const formatReservationDate = (fecha) => {
-    if (!fecha) return 'Fecha pendiente';
-    
-    // CASO 1: Si ya viene como texto "2026-02-15", lo mostramos tal cual.
-    // Esto evita que JavaScript le reste un día por la zona horaria.
-    if (typeof fecha === 'string') {
-        // Si viene con hora "2026-02-15T00:00:00.000Z", cortamos solo la fecha
-        return fecha.split('T')[0];
-    }
-    
-    // CASO 2: Si viene de Firebase/Firestore como Timestamp (segundos)
-    // Usamos UTC para evitar que al restar 5 horas (Ecuador) cambie al día anterior
+    if (!fecha) return 'Pendiente';
+    // Si viene como string
+    if (typeof fecha === 'string') return fecha.split('T')[0];
+    // Si viene como Timestamp (seconds)
     const seconds = fecha._seconds || fecha.seconds;
     if (seconds) {
-        const dateObj = new Date(seconds * 1000);
-        // forzamos el formato en español y zona horaria de Ecuador explícita
-        return dateObj.toLocaleDateString('es-EC', { 
-            timeZone: 'America/Guayaquil',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit' 
+        return new Date(seconds * 1000).toLocaleDateString('es-EC', { 
+            timeZone: 'America/Guayaquil', year: 'numeric', month: '2-digit', day: '2-digit' 
         });
     }
-
-    // CASO 3: Objeto Date nativo
-    if (fecha instanceof Date) {
-        return fecha.toISOString().split('T')[0];
-    }
-
     return 'Fecha inválida';
   };
-  // -------------------------------------------------------------
 
-  useEffect(() => {
-    const load = async () => {
-      if (!jwtToken) return;
-      try {
-        setLoading(true);
-        const res = await fetch(`${API_URL}/reservas/mine`, {
-          headers: { Authorization: `Bearer ${jwtToken}` },
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error cargando reservas');
-        
+  // --- 2. CARGAR DATOS ---
+  const loadReservas = async () => {
+    if (!jwtToken) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/reservas/mine`, {
+        headers: { Authorization: `Bearer ${jwtToken}` },
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
         setReservations((data.reservas || []).map((r) => ({
           ...r,
           labName: r.laboratorioNombre || r.laboratorioId,
-          
-          // AQUÍ: Usamos el campo 'fecha' (día reservado) y NO 'createdAt'
-          date: formatReservationDate(r.fecha), 
-          
+          date: formatReservationDate(r.fecha),
           time: `${String(r.horaInicio).padStart(2,'0')}:00`,
           duration: r.horaFin - r.horaInicio,
           status: r.estado === 'confirmada' ? 'Confirmada' : (r.estado === 'pendiente' ? 'Pendiente' : 'Cancelada'),
         })));
-        setError(null);
-      } catch (e) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
       }
-    };
-    load();
-  }, [jwtToken]);
-
-  const handleCancel = async (reservationId) => {
-      if(!confirm("¿Estás seguro de cancelar esta reserva?")) return;
-      
-      try {
-        const resp = await fetch(`${API_URL}/reservas/${reservationId}/cancel`, {
-          method: 'PATCH',
-          headers: { Authorization: `Bearer ${jwtToken}` },
-        });
-        const d = await resp.json();
-        if (!resp.ok) throw new Error(d.error || 'Error cancelando');
-        
-        setReservations((prev) => prev.map((p) => p.id === reservationId ? { ...p, status: 'Cancelada' } : p));
-      } catch (e) {
-        alert(e.message);
-      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!user || user.role !== 'student') {
-    return (
-        <div className="min-h-screen flex items-center justify-center">
-            <p>Cargando acceso...</p>
-        </div>
-    );
-  }
+  useEffect(() => { loadReservas(); }, [jwtToken]);
+
+  // --- 3. LÓGICA DE REPORTAR (MONGODB) ---
+  const openReportModal = (reserva) => {
+    setSelectedReserva(reserva);
+    setReportForm({ titulo: '', descripcion: '' });
+    setReportModalOpen(true);
+  };
+
+  const submitReport = async (e) => {
+    e.preventDefault();
+    if (!reportForm.titulo || !reportForm.descripcion) return alert("Completa los campos");
+
+    try {
+      setSendingReport(true);
+      const payload = {
+        titulo: reportForm.titulo,
+        descripcion: reportForm.descripcion,
+        laboratorioId: selectedReserva.laboratorioId || 'LAB-GEN',
+        laboratorioNombre: selectedReserva.labName
+      };
+
+      const res = await fetch(`${API_URL}/reportes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwtToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert("✅ Reporte enviado correctamente.");
+        setReportModalOpen(false);
+      } else {
+        alert("❌ Error al enviar reporte");
+      }
+    } catch (error) {
+      alert("Error de conexión");
+    } finally {
+      setSendingReport(false);
+    }
+  };
+
+  const handleCancel = async (id) => {
+      if(!confirm("¿Cancelar reserva?")) return;
+      try {
+        await fetch(`${API_URL}/reservas/${id}/cancel`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${jwtToken}` }
+        });
+        loadReservas(); // Recargar lista
+      } catch (e) { alert(e.message); }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 p-8 relative">
       
-      {/* Modal de Éxito al crear reserva */}
-      {newReservationDetails && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-            <div className="bg-green-600 p-6 text-center">
-              <div className="mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
-                <CheckCircle className="text-white w-10 h-10" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">¡Reserva Exitosa!</h3>
-              <p className="text-green-100 mt-2">Tu laboratorio ha sido reservado correctamente.</p>
+      {/* MODAL DE REPORTE */}
+      {reportModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-4 border-b pb-4">
+                <h3 className="text-xl font-bold text-red-600 flex items-center gap-2">
+                    <AlertTriangle /> Reportar Fallo
+                </h3>
+                <button onClick={() => setReportModalOpen(false)}><X /></button>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-3">
-                <div className="flex justify-between border-b border-slate-200 pb-2">
-                  <span className="text-slate-500 text-sm">Laboratorio</span>
-                  <span className="font-semibold text-slate-800">{newReservationDetails.laboratorioNombre}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-200 pb-2">
-                  <span className="text-slate-500 text-sm">Fecha Reservada</span>
-                  {/* Aquí mostramos directamente la fecha que seleccionó el usuario */}
-                  <span className="font-semibold text-slate-800">{newReservationDetails.fecha}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 text-sm">Horario</span>
-                  <span className="font-semibold text-slate-800">
-                    {String(newReservationDetails.horaInicio).padStart(2,'0')}:00 - {String(newReservationDetails.horaFin).padStart(2,'0')}:00
-                  </span>
-                </div>
-              </div>
+            <p className="text-sm text-slate-500 mb-4">
+                Reportando problema en: <strong>{selectedReserva?.labName}</strong>
+            </p>
 
-              <button 
-                onClick={() => setNewReservationDetails(null)}
-                className="w-full bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-slate-800 transition-colors"
-              >
-                Entendido
-              </button>
-            </div>
+            <form onSubmit={submitReport} className="space-y-4">
+                <input 
+                    className="w-full border p-3 rounded-lg"
+                    placeholder="Título del problema (ej: Teclado dañado)"
+                    value={reportForm.titulo}
+                    onChange={e => setReportForm({...reportForm, titulo: e.target.value})}
+                />
+                <textarea 
+                    className="w-full border p-3 rounded-lg h-32 resize-none"
+                    placeholder="Describe qué sucedió..."
+                    value={reportForm.descripcion}
+                    onChange={e => setReportForm({...reportForm, descripcion: e.target.value})}
+                />
+                <button 
+                    disabled={sendingReport}
+                    className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700"
+                >
+                    {sendingReport ? 'Enviando...' : 'Enviar Reporte'}
+                </button>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Tabla Principal */}
-      <div className="max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-800">Mis Reservas</h1>
-          <button
-            onClick={() => navigate('/catalogo')}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 shadow-md transition-all"
-          >
-            Nueva Reserva
-          </button>
-        </div>
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-3xl font-bold text-slate-800 mb-8">Mis Reservas</h1>
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden border border-slate-200">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50 border-b">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Laboratorio</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Fecha de Reserva</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Hora</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Duración</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Laboratorio</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Fecha</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Hora</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase">Estado</th>
+                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="divide-y divide-slate-100">
               {reservations.map((reservation) => (
-                <tr key={reservation.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                    {reservation.labName}
+                <tr key={reservation.id}>
+                  <td className="px-6 py-4 font-bold text-slate-700">{reservation.labName}</td>
+                  <td className="px-6 py-4 text-slate-600">{reservation.date}</td>
+                  <td className="px-6 py-4 text-slate-500">{reservation.time}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                      reservation.status === 'Confirmada' ? 'bg-green-100 text-green-700' :
+                      reservation.status === 'Cancelada' ? 'bg-slate-100 text-slate-600' : 'bg-yellow-100'
+                    }`}>{reservation.status}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 font-bold">
-                    {/* Aquí se muestra la fecha procesada */}
-                    {reservation.date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    {reservation.time}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    {reservation.duration} hora(s)
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      reservation.status === 'Confirmada' ? 'bg-green-100 text-green-800' :
-                      reservation.status === 'Cancelada' ? 'bg-slate-100 text-slate-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {reservation.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                  <td className="px-6 py-4 text-right">
                     {reservation.status !== 'Cancelada' && (
-                        <div className="flex gap-3">
+                        <div className="flex justify-end gap-3">
                             <button
-                                className="text-red-600 hover:text-red-900 font-medium transition-colors hover:underline"
+                                className="text-slate-400 hover:text-red-600 text-sm font-medium"
                                 onClick={() => handleCancel(reservation.id)}
                             >
                                 Cancelar
                             </button>
-                            <button className="text-blue-600 hover:text-blue-900 font-medium transition-colors hover:underline">
-                                Editar
+                            
+                            {/* --- AQUÍ ESTÁ EL CAMBIO: BOTÓN REPORTAR --- */}
+                            <button 
+                                onClick={() => openReportModal(reservation)}
+                                className="flex items-center gap-1 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1 rounded text-sm font-bold transition-colors"
+                            >
+                                <AlertTriangle size={14} />
+                                Reportar
                             </button>
                         </div>
                     )}
@@ -227,16 +217,7 @@ const StudentReservations = () => {
               ))}
             </tbody>
           </table>
-          
-          {loading && (
-             <div className="p-8 text-center text-slate-500">Cargando reservas...</div>
-          )}
-          
-          {!loading && reservations.length === 0 && (
-             <div className="p-12 text-center text-slate-500">
-                 No tienes reservas activas aún.
-             </div>
-          )}
+          {reservations.length === 0 && !loading && <div className="p-8 text-center text-slate-400">Sin reservas</div>}
         </div>
       </div>
     </div>
