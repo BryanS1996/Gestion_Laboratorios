@@ -14,7 +14,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Admin: permite visualizar y modificar reservas (según lo pedido: "Configuración")
+// Admin: permite visualizar y modificar reservas
 const Configuracion = () => {
   const navigate = useNavigate();
   const { jwtToken, logout } = useAuth();
@@ -74,40 +74,56 @@ const Configuracion = () => {
     });
   }, [reservas, q]);
 
+  // --- FUNCIÓN CORREGIDA: Formateo Robusto de Fecha ---
   const fmtFecha = (f) => {
-    try {
-      const d = f?.toDate ? f.toDate() : f;
-      // Validación extra por si es timestamp numérico de firebase sin toDate
-      if (f?.seconds) return new Date(f.seconds * 1000).toLocaleDateString('es-ES');
-      return d ? new Date(d).toLocaleDateString('es-ES') : 'N/A';
-    } catch {
-      return 'N/A';
-    }
-  };
+    if (!f) return 'Sin fecha';
 
-  // --- AQUÍ ESTÁ LA CORRECCIÓN DE SEGURIDAD ---
+    // 1. Si ya viene como texto "2026-02-15", devolverlo tal cual (evita restar horas)
+    if (typeof f === 'string') {
+        return f.split('T')[0];
+    }
+
+    // 2. Si viene como Timestamp de Firebase (seconds)
+    const seconds = f._seconds || f.seconds;
+    if (seconds) {
+        // Convertimos a fecha y forzamos zona horaria de Ecuador
+        return new Date(seconds * 1000).toLocaleDateString('es-EC', {
+            timeZone: 'America/Guayaquil',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    }
+
+    // 3. Si es un objeto Date estándar de JS
+    if (f instanceof Date) {
+        return f.toLocaleDateString('es-EC');
+    }
+
+    return 'Fecha inválida';
+  };
+  // ----------------------------------------------------
+
   const openEdit = (r) => {
     let dateValue = '';
 
     try {
-      // 1. Si no hay fecha, poner la de hoy
       if (!r.fecha) {
         dateValue = new Date().toISOString().split('T')[0];
       }
-      // 2. Si es objeto Firebase/Firestore (tiene .seconds)
-      else if (r.fecha.seconds) {
-        dateValue = new Date(r.fecha.seconds * 1000).toISOString().split('T')[0];
+      else if (typeof r.fecha === 'string') {
+         dateValue = r.fecha.split('T')[0];
       }
-      // 3. Si tiene método .toDate() (objeto Firestore clásico en cliente)
+      else if (r.fecha.seconds || r.fecha._seconds) {
+        const secs = r.fecha.seconds || r.fecha._seconds;
+        dateValue = new Date(secs * 1000).toISOString().split('T')[0];
+      }
       else if (typeof r.fecha.toDate === 'function') {
         dateValue = r.fecha.toDate().toISOString().split('T')[0];
       }
-      // 4. Si es string o Date estándar
       else {
         const d = new Date(r.fecha);
-        // Verificar si es una fecha válida antes de hacer toISOString
         if (isNaN(d.getTime())) {
-            console.warn("Fecha inválida detectada, usando fecha actual:", r.fecha);
             dateValue = new Date().toISOString().split('T')[0];
         } else {
             dateValue = d.toISOString().split('T')[0];
@@ -115,7 +131,6 @@ const Configuracion = () => {
       }
     } catch (error) {
       console.error("Error procesando fecha en openEdit:", error);
-      // Fallback de seguridad definitivo: fecha de hoy
       dateValue = new Date().toISOString().split('T')[0];
     }
 
@@ -127,7 +142,6 @@ const Configuracion = () => {
       _estado: r.estado || 'confirmada',
     });
   };
-  // ---------------------------------------------
 
   const saveEdit = async () => {
     if (!editing) return;
@@ -298,7 +312,8 @@ const Configuracion = () => {
                           <div className="text-xs text-slate-400">{r.userEmail || '—'}</div>
                         </div>
                       </td>
-                      <td className="p-4 text-slate-600">{fmtFecha(r.fecha)}</td>
+                      {/* AQUÍ SE USA LA FUNCIÓN MEJORADA */}
+                      <td className="p-4 text-slate-600 font-medium">{fmtFecha(r.fecha)}</td>
                       <td className="p-4 text-slate-600">
                         <div className="flex items-center gap-2">
                           <Clock size={16} className="text-slate-400" />

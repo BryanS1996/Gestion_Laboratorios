@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+// 1. IMPORTAR CONEXIÓN A MONGO
+const connectMongo = require('./config/mongo');
+
 // Import routes
 const userRoutes = require('./routes/userRoutes');
 const laboratoriosRoutes = require('./routes/laboratorios.routes');
@@ -18,6 +21,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 2. CONECTAR A MONGODB (Se ejecuta al iniciar)
+connectMongo();
 
 // Logging middleware
 app.use((req, res, next) => {
