@@ -32,6 +32,9 @@ services:
   backend:
     build: ./Backend  # Busca el Dockerfile en la carpeta Backend
     container_name: backend_lab_api
+    env_file:
+      - .env
+  
     restart: always
     ports:
       - "5000:5000"   # <--- CORREGIDO: Mapea el puerto 5000 real
@@ -49,3 +52,5 @@ services:
 
 volumes:
   mongo_data:
+
+

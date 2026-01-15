@@ -1,34 +1,32 @@
+// Backend/routes/reportes.routes.js
 const express = require('express');
 const router = express.Router();
-const { eliminarReporte } = require("../controllers/reporteController");
 
-// 1. IMPORTACIÓN CORRECTA:
-// Tu archivo exporta la función directa, así que NO usamos llaves { }
-const authMiddleware = require('../middleware/authMiddleware'); 
-const { upload } = require("../middlewares/upload.Middleware");
-const { crearReporte, obtenerMisReportes } = require('../controllers/reporteController');
+const authMiddleware = require('../middleware/authMiddleware');
+const upload = require('../middleware/multerUpload');
 
-// 2. USO CORRECTO:
-// Como tu middleware es: (roles) => { return (req, res, next) => ... }
-// Tienes que EJECUTARLO con paréntesis () para obtener la función final.
+const {
+  crearReporte,
+  obtenerMisReportes,
+  eliminarReporte,
+  obtenerUrlImagenReporte
+} = require('../controllers/reporteController');
 
-// Ruta: Obtener historial (Cualquier rol autenticado)
+// Crear reporte (con imagen opcional)
+router.post(
+  '/',
+  authMiddleware(['student', 'professor', 'admin']),
+  upload.single('imagen'),
+  crearReporte
+);
+
+// Mis reportes
 router.get('/mis-reportes', authMiddleware(), obtenerMisReportes);
 
-// Ruta: Crear reporte (Roles específicos o todos si lo dejas vacío, según tu lógica)
-// Aquí le pasamos los roles permitidos en un array
-router.post('/', authMiddleware(['student', 'professor', 'admin']),upload.single("imagen"), crearReporte);
+// URL firmada de imagen
+router.get('/:id/imagen-url', authMiddleware(), obtenerUrlImagenReporte);
 
-router.delete(
-  "/:id",
-  authMiddleware(["student", "professor", "admin"]),
-  eliminarReporte
-  router.get(
-  "/:id/imagen-url",
-  authMiddleware(["student","professor","admin"]),
-  obtenerUrlImagenReporte
-);
-
-);
+// Eliminar reporte
+router.delete('/:id', authMiddleware(['student', 'professor', 'admin']), eliminarReporte);
 
 module.exports = router;

@@ -22,6 +22,7 @@ function safeExt(mimetype) {
  * Bucket PRIVADO → solo retorna imageKey
  */
 async function uploadReportImage({ buffer, mimetype, userId, reporteId }) {
+  if (!b2S3) throw new Error("b2S3 no está inicializado. Revisa config/b2S3.js");
   const bucket = process.env.B2_BUCKET;
 
   const ext = safeExt(mimetype);
