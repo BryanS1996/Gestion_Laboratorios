@@ -23,10 +23,6 @@ function safeExt(mimetype) {
  */
 async function uploadReportImage({ buffer, mimetype, userId, reporteId }) {
   if (!b2S3) throw new Error("b2S3 no está inicializado. Revisa config/b2S3.js");
-<<<<<<< HEAD
-  const bucket = process.env.B2_BUCKET;
-=======
->>>>>>> rescue-avances
 
   const bucket = process.env.B2_BUCKET;
   const ext = safeExt(mimetype);
