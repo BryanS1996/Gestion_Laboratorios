@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const {
   PutObjectCommand,
   DeleteObjectCommand,
-  GetObjectCommand
+  GetObjectCommand,
 } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { b2S3 } = require("../config/b2S3");
@@ -23,13 +23,18 @@ function safeExt(mimetype) {
  */
 async function uploadReportImage({ buffer, mimetype, userId, reporteId }) {
   if (!b2S3) throw new Error("b2S3 no está inicializado. Revisa config/b2S3.js");
+<<<<<<< HEAD
   const bucket = process.env.B2_BUCKET;
+=======
+>>>>>>> rescue-avances
 
+  const bucket = process.env.B2_BUCKET;
   const ext = safeExt(mimetype);
   const rand = crypto.randomBytes(8).toString("hex");
 
-  // Ruta organizada
   const key = `reportes/${userId}/${reporteId}/${Date.now()}_${rand}.${ext}`;
+
+  console.log("📤 Subiendo imagen a B2:", key);
 
   await b2S3.send(
     new PutObjectCommand({
@@ -40,13 +45,11 @@ async function uploadReportImage({ buffer, mimetype, userId, reporteId }) {
     })
   );
 
-  // 🔐 Bucket privado → NO publicUrl
   return { key };
 }
 
 /**
  * GENERAR URL FIRMADA (para mostrar imagen)
- * expiresInSec = segundos (default 5 min)
  */
 async function getSignedReportImageUrl(imageKey, expiresInSec = 300) {
   if (!imageKey) return null;

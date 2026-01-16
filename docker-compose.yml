@@ -31,9 +31,21 @@ services:
     container_name: backend_lab_api
     restart: always
     ports:
+<<<<<<< HEAD
       - "5000:5000"
     env_file:
       - ./Backend/.env  # ← ESTA ES LA CLAVE
+=======
+      - "5000:5000"  
+    env_file:
+      - ./Backend/.env # <--- CORREGIDO: Mapea el puerto 5000 real
+    environment:
+      - PORT=5000
+      # CONEXIÓN DOCKER: Usa 'mongodb' en lugar de 'localhost'
+      - MONGO_URI=mongodb://admin:admin123@mongodb:27017/gestion_laboratorios?authSource=admin
+      # Agrega aquí tus credenciales de Firebase si las usas por variables de entorno
+      # - FIREBASE_PROJECT_ID=...
+>>>>>>> rescue-avances
     depends_on:
       - mongodb
     volumes:
