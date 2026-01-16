@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import auth from '../firebase.js';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 console.log('🔗 API URL configurada:', API_URL);
 
@@ -122,23 +122,14 @@ export const useAuth = () => {
       // 2. Obtener Firebase ID Token
       const idToken = await firebaseUser.getIdToken();
 
-      // 3. Registrar en backend (crear documento en Firestore con rol detectado)
-      console.log('📤 Enviando al backend para registrar en Firestore');
-      const response = await fetch(`${API_URL}/users/register`, {
+      const response = await fetch(`${API_URL}/auth/firebase`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
-          password,
-          displayName
-          // El backend detectará el rol del email automáticamente
-        })
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        signal: controller.signal
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error registrando usuario en el servidor');
-      }
 
       const registerData = await response.json();
       console.log('✅ Usuario registrado en backend. Rol:', registerData.user.role);
