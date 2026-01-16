@@ -1,13 +1,19 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+
 import AdminDashboard from '../pages/admin/dashboard';
 import Users from '../pages/admin/Users';
 import Configuracion from '../pages/admin/Configuracion';
+
 import Catalog from '../pages/Catalog';
 import StudentReservations from '../pages/StudentReservations';
+import Reportes from '../pages/Reportes';
+
 import ProtectedRoute from './ProtectedRoute';
-import Reportes from '../pages/Reportes'; // ✅ Ya lo tenías importado
+
+// ✅ Layout con sidebar
+import AppLayout from '../components/AppLayout';
 
 const AppRoutes = () => {
   return (
@@ -15,77 +21,70 @@ const AppRoutes = () => {
       {/* Ruta raíz redirige al login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Ruta del Login */}
+      {/* Rutas públicas */}
       <Route path="/login" element={<Login />} />
-
-      {/* Ruta del Registro */}
       <Route path="/register" element={<Register />} />
 
-      {/* Rutas Protegidas - Admin */}
+      {/* ✅ Grupo de rutas privadas CON SIDEBAR */}
       <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin/usuarios"
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <Users />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin/configuracion"
-        element={
-          <ProtectedRoute requiredRole="admin">
-            <Configuracion />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Ruta por defecto para /admin redirige al dashboard */}
-      <Route
-        path="/admin"
-        element={<Navigate to="/admin/dashboard" replace />}
-      />
-
-      {/* Catálogo para profesores y estudiantes */}
-      <Route
-        path="/catalogo"
         element={
           <ProtectedRoute>
-            <Catalog />
+            <AppLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        {/* Catálogo para profesores y estudiantes */}
+        <Route path="/catalogo" element={<Catalog />} />
 
-      {/* Mis reservas (solo student) */}
-      <Route
-        path="/mis-reservas"
-        element={
-          <ProtectedRoute requiredRole="student">
-            <StudentReservations />
-          </ProtectedRoute>
-        }
-      />
+        {/* Mis reservas (solo student) */}
+        <Route
+          path="/mis-reservas"
+          element={
+            <ProtectedRoute requiredRole="student">
+              <StudentReservations />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* ✅ NUEVA RUTA: REPORTES (Agrega esto) */}
-      <Route
-        path="/reportes"
-        element={
-          <ProtectedRoute requiredRole="student">
-            <Reportes />
-          </ProtectedRoute>
-        }
-      />
+        {/* Reportes (solo student) */}
+        <Route
+          path="/reportes"
+          element={
+            <ProtectedRoute requiredRole="student">
+              <Reportes />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Ruta por defecto - redirige al login */}
+        {/* Admin */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/usuarios"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <Users />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/configuracion"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <Configuracion />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+      </Route>
+
+      {/* Ruta por defecto */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
