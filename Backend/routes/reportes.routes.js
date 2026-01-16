@@ -16,9 +16,19 @@ const {
 router.post(
   '/',
   authMiddleware(['student', 'professor', 'admin']),
-  upload.single('imagen'),
+  (req, res, next) => {
+    upload.single('imagen')(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: 'Archivo demasiado grande o inválido.' });
+      } else if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  },
   crearReporte
 );
+
 
 // Mis reportes
 router.get('/mis-reportes', authMiddleware(), obtenerMisReportes);
