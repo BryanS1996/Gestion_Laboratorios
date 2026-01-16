@@ -34,7 +34,9 @@ services:
     container_name: backend_lab_api
     restart: always
     ports:
-      - "5000:5000"   # <--- CORREGIDO: Mapea el puerto 5000 real
+      - "5000:5000"  
+    env_file:
+      - ./Backend/.env # <--- CORREGIDO: Mapea el puerto 5000 real
     environment:
       - PORT=5000
       # CONEXIÓN DOCKER: Usa 'mongodb' en lugar de 'localhost'
