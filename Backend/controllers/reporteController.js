@@ -16,7 +16,7 @@ const crearReporte = async (req, res) => {
       return res.status(400).json({ error: 'Faltan datos obligatorios: laboratorioId y/o descripcion' });
     }
 
-    // Crear instancia de reporte
+    // Crear instancia del reporte (sin imagen aún)
     const nuevoReporte = new Reporte({
       userId: uid,
       userEmail: email,
@@ -24,13 +24,12 @@ const crearReporte = async (req, res) => {
       laboratorioNombre: laboratorioNombre || '',
       titulo: titulo?.trim() || 'Reporte de incidente',
       descripcion,
-      imagenUrl: null,
-      imageKey: null,
+      imageKey: null, // se setea después si hay imagen
       estado: 'pendiente',
       fechaCreacion: new Date()
     });
 
-    // Si se adjuntó imagen, subirla
+    // Si se adjunta imagen
     if (req.file) {
       try {
         const { key } = await uploadReportImage({
@@ -40,7 +39,7 @@ const crearReporte = async (req, res) => {
           reporteId: String(nuevoReporte._id),
         });
 
-        nuevoReporte.imageKey = key;
+        nuevoReporte.imageKey = key; // 💾 Guarda la clave del archivo en Backblaze
       } catch (err) {
         console.error('❌ Error al subir imagen a B2:', err);
         return res.status(500).json({ error: 'Error al subir la imagen del reporte' });
@@ -49,7 +48,7 @@ const crearReporte = async (req, res) => {
 
     await nuevoReporte.save();
 
-    console.log(`📝 Nuevo reporte creado por ${email} con ID ${nuevoReporte._id}`);
+    console.log(`📝 Reporte creado por ${email} con ID ${nuevoReporte._id}`);
     return res.status(201).json({
       mensaje: 'Reporte registrado exitosamente',
       reporte: nuevoReporte
@@ -79,7 +78,7 @@ const obtenerMisReportes = async (req, res) => {
   }
 };
 
-// 3) ELIMINAR REPORTE + IMAGEN EN B2
+// 3) ELIMINAR REPORTE + BORRAR IMAGEN DE B2
 const eliminarReporte = async (req, res) => {
   try {
     const { id } = req.params;
@@ -93,7 +92,7 @@ const eliminarReporte = async (req, res) => {
       try {
         await deleteReportImage(reporte.imageKey);
       } catch (err) {
-        console.warn('⚠️ Error al borrar imagen de B2:', err.message);
+        console.warn('⚠️ Error al eliminar imagen en B2:', err.message);
       }
     }
 
@@ -107,22 +106,26 @@ const eliminarReporte = async (req, res) => {
   }
 };
 
-// 4) OBTENER URL FIRMADA DE IMAGEN (bucket privado)
+// 4) OBTENER URL FIRMADA PARA IMAGEN EN B2
 const obtenerUrlImagenReporte = async (req, res) => {
   try {
     const { id } = req.params;
     const { uid } = req.user;
 
     const reporte = await Reporte.findById(id);
+    console.log("📄 Buscando imagen para reporte:", id);
+
     if (!reporte) return res.status(404).json({ error: 'Reporte no encontrado' });
     if (reporte.userId !== uid) return res.status(403).json({ error: 'No autorizado' });
     if (!reporte.imageKey) return res.status(404).json({ error: 'Este reporte no tiene imagen asociada' });
 
-    const signedUrl = await getSignedReportImageUrl(reporte.imageKey, 300); // 5 min
+    const signedUrl = await getSignedReportImageUrl(reporte.imageKey, 300);
+    console.log("🔐 URL firmada generada:", signedUrl);
+
     return res.json({ url: signedUrl });
   } catch (error) {
     console.error('❌ Error generando URL firmada:', error);
-    return res.status(500).json({ error: error.message || 'Error al generar la URL de la imagen' });
+    return res.status(500).json({ error: 'No se pudo generar URL' });
   }
 };
 

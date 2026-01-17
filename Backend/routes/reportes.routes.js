@@ -1,38 +1,39 @@
-const express = require('express'); 
+const express = require('express');
 const router = express.Router();
+
 const authMiddleware = require('../middleware/authMiddleware');
-const upload = require("../middleware/multerUpload"); // ✅ CORREGIDO
+const upload = require('../middleware/multerUpload');
 
 const {
   crearReporte,
   obtenerMisReportes,
   eliminarReporte,
-  obtenerUrlImagenReporte
+  obtenerUrlImagenReporte // ✅ usa el controller correcto
 } = require('../controllers/reporteController');
 
-// Historial de reportes
+// Mis reportes
 router.get('/mis-reportes', authMiddleware(), obtenerMisReportes);
 
-// Crear nuevo reporte (con imagen opcional)
+// Crear nuevo reporte con imagen
 router.post(
   '/',
   authMiddleware(['student', 'professor', 'admin']),
-  upload.single("imagen"),
+  upload.single('imagen'),
   crearReporte
 );
 
-// Eliminar reporte
-router.delete(
-  "/:id",
-  authMiddleware(["student", "professor", "admin"]),
-  eliminarReporte
+// 🔐 Obtener imagen (URL firmada, solo desde controller)
+router.get(
+  '/:id/imagen-url',
+  authMiddleware(),
+  obtenerUrlImagenReporte
 );
 
-// Obtener URL firmada de imagen
-router.get(
-  "/:id/imagen-url",
-  authMiddleware(["student","professor","admin"]),
-  obtenerUrlImagenReporte
+// Eliminar
+router.delete(
+  '/:id',
+  authMiddleware(),
+  eliminarReporte
 );
 
 module.exports = router;

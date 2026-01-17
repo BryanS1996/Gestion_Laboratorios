@@ -35,10 +35,11 @@ const ReporteSchema = new mongoose.Schema({
     required: true 
   },
   
-  // Backblaze: Aquí guardaremos la URL pública de la imagen
-  imagenUrl: { 
+  // Backblaze: clave privada del archivo en el bucket
+  imageKey: {
     type: String,
-    required: false
+    required: false,
+    index: true
   },
   
   // Estado del reporte para gestión administrativa

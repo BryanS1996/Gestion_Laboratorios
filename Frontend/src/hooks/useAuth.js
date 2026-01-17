@@ -4,7 +4,10 @@ import {
   signOut, 
   onAuthStateChanged,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  signInWithPopup,
+  GoogleAuthProvider,
+  updateProfile
 } from 'firebase/auth';
 import auth from '../firebase.js';
 
@@ -119,8 +122,17 @@ export const useAuth = () => {
       const firebaseUser = userCredential.user;
       console.log('✅ Usuario creado en Firebase:', firebaseUser.uid);
 
+      // (Opcional) guardar el nombre en el perfil de Firebase
+      if (displayName) {
+        await updateProfile(firebaseUser, { displayName });
+      }
+
       // 2. Obtener Firebase ID Token
       const idToken = await firebaseUser.getIdToken();
+
+      // Timeout (10s) para evitar que el fetch se quede colgado
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(`${API_URL}/auth/firebase`, {
         method: 'POST',
@@ -130,6 +142,8 @@ export const useAuth = () => {
         },
         signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       const registerData = await response.json();
       console.log('✅ Usuario registrado en backend. Rol:', registerData.user.role);
@@ -151,6 +165,25 @@ export const useAuth = () => {
       return firebaseUser;
     } catch (error) {
       console.error('❌ Error en registro:', error.message);
+      setError(error.message);
+      setLoading(false);
+      throw new Error(error.message);
+    }
+  };
+
+  // 🔐 Login / Registro con Google (Popup)
+  // Nota: onAuthStateChanged se encarga de pedir el JWT al backend.
+  const loginWithGoogle = async () => {
+    console.log('🔐 Intentando login con Google...');
+    setLoading(true);
+    setError(null);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      console.log('✅ Google signInWithPopup exitoso:', result.user.email);
+      return result.user;
+    } catch (error) {
+      console.error('❌ Error login con Google:', error.message);
       setError(error.message);
       setLoading(false);
       throw new Error(error.message);
@@ -193,6 +226,7 @@ export const useAuth = () => {
     error,
     login,
     register,
+    loginWithGoogle,
     resetPassword,
     logout,
     isAuthenticated: !!user
