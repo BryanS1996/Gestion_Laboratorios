@@ -1,65 +1,28 @@
 const mongoose = require('mongoose');
 
-const ReporteSchema = new mongoose.Schema({
-  // Vinculación con el usuario de Firebase (Solo guardamos el ID)
-  userId: { 
-    type: String, 
-    required: true,
-    index: true // Crea un índice para buscar rápido los reportes de un usuario
-  },
-  
-  // Guardamos el email para referencia rápida sin consultar Firebase Auth
-  userEmail: {
-    type: String,
-    required: false
-  },
-  
-  // Datos del Laboratorio (Vienen de tu frontend/Firestore)
-  laboratorioId: { 
-    type: String, 
-    required: true 
-  },
-  laboratorioNombre: {
-    type: String,
-    required: false
+const reservaSchema = new mongoose.Schema({
+  reservaId: { type: String, required: true, unique: true },
+
+  userId: { type: String, required: true },
+  userEmail: { type: String, required: true },
+
+  laboratorioId: { type: String, required: true },
+  laboratorioNombre: { type: String, required: true },
+
+  fecha: { type: String, required: true },
+  horario: { type: String, required: true },
+
+  tipoAcceso: { type: String, enum: ['basico', 'premium'], required: true },
+
+  pago: {
+    requerido: { type: Boolean, default: false },
+    stripeSessionId: String,
+    stripePaymentIntent: String,
+    estado: { type: String, enum: ['pendiente', 'pagado'], default: 'pendiente' },
+    monto: Number,
   },
 
-  // Detalles del Incidente
-  titulo: {
-    type: String,
-    required: false,
-    default: 'Reporte de incidente'
-  },
-  descripcion: { 
-    type: String, 
-    required: true 
-  },
-  
-  // Backblaze: clave privada del archivo en el bucket
-  imageKey: {
-    type: String,
-    required: false,
-    index: true
-  },
-  
-  // Estado del reporte para gestión administrativa
-  estado: {
-    type: String,
-    enum: ['pendiente', 'en_revision', 'resuelto', 'descartado'],
-    default: 'pendiente'
-  },
-
-  // Campo flexible para guardar el JSON que nos devuelva Gemini (IA)
-  // Usamos 'Mixed' porque la estructura de la IA puede variar
-  analisisIA: {
-    type: mongoose.Schema.Types.Mixed,
-    required: false
-  },
-
-  fechaCreacion: {
-    type: Date,
-    default: Date.now
-  }
+  creadoEn: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Reporte', ReporteSchema);
+module.exports = mongoose.model('Reserva', reservaSchema);

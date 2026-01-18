@@ -13,3 +13,4 @@ yarn-error.log*
 # Entorno
 .env
 .env.local
+Backend/.env

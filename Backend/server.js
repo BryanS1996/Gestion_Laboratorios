@@ -14,8 +14,12 @@ const adminRoutes = require('./routes/admin.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const authRoutes = require('./routes/auth.routes');
 
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+const stripeWebhook = require('./routes/stripe.webhook');
+app.use('/api/stripe', stripeWebhook); // Usa express.raw en este archivo
 
 // Middleware
 app.use(cors());
@@ -77,6 +81,10 @@ app.use((req, res) => {
     method: req.method 
   });
 });
+
+// Stripe webhook endpoint
+const stripeRoutes = require('./routes/stripe.routes');
+app.use('/api/stripe', stripeRoutes);
 
 // Start server
 app.listen(PORT, () => {
