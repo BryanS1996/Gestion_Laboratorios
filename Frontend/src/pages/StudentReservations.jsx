@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, X, Send, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle, AlertTriangle, X, Send, Image as ImageIcon, CreditCard } from 'lucide-react';
+import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -13,14 +14,11 @@ const StudentReservations = () => {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modales
   const [newReservationDetails, setNewReservationDetails] = useState(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedReserva, setSelectedReserva] = useState(null);
   const [reportForm, setReportForm] = useState({ titulo: '', descripcion: '' });
   const [sendingReport, setSendingReport] = useState(false);
-
-  // ✅ NUEVO: Imagen para Backblaze (archivo)
   const [reportImage, setReportImage] = useState(null);
 
   useEffect(() => {
@@ -30,12 +28,9 @@ const StudentReservations = () => {
     }
   }, [location]);
 
-  // --- 1. FUNCIÓN DE FECHAS (IMPORTANTE) ---
   const formatReservationDate = (fecha) => {
     if (!fecha) return 'Pendiente';
-    // Si viene como string
     if (typeof fecha === 'string') return fecha.split('T')[0];
-    // Si viene como Timestamp (seconds)
     const seconds = fecha._seconds || fecha.seconds;
     if (seconds) {
       return new Date(seconds * 1000).toLocaleDateString('es-EC', {
@@ -48,7 +43,6 @@ const StudentReservations = () => {
     return 'Fecha inválida';
   };
 
-  // --- 2. CARGAR DATOS ---
   const loadReservas = async () => {
     if (!jwtToken) return;
     try {
@@ -79,11 +73,10 @@ const StudentReservations = () => {
 
   useEffect(() => { loadReservas(); }, [jwtToken]);
 
-  // --- 3. LÓGICA DE REPORTAR (MONGODB + BACKBLAZE) ---
   const openReportModal = (reserva) => {
     setSelectedReserva(reserva);
     setReportForm({ titulo: '', descripcion: '' });
-    setReportImage(null); // ✅ limpiar imagen cada vez que se abre
+    setReportImage(null);
     setReportModalOpen(true);
   };
 
@@ -94,7 +87,6 @@ const StudentReservations = () => {
     setReportImage(null);
   };
 
-  // ✅ MODIFICADO: enviar como FormData para incluir imagen
   const submitReport = async (e) => {
     e.preventDefault();
     if (!reportForm.titulo || !reportForm.descripcion) return alert("Completa los campos");
@@ -102,17 +94,13 @@ const StudentReservations = () => {
     try {
       setSendingReport(true);
 
-      // ✅ multipart/form-data
       const formData = new FormData();
       formData.append('titulo', reportForm.titulo);
       formData.append('descripcion', reportForm.descripcion);
       formData.append('laboratorioId', selectedReserva?.laboratorioId || 'LAB-GEN');
       formData.append('laboratorioNombre', selectedReserva?.labName || '');
-
-      // (Opcional) vincular con la reserva
       formData.append('reservaId', selectedReserva?.id || selectedReserva?._id || '');
 
-      // ✅ CLAVE: el nombre del campo debe ser "imagen"
       if (reportImage) {
         formData.append('imagen', reportImage);
       }
@@ -121,7 +109,6 @@ const StudentReservations = () => {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${jwtToken}`,
-          // ❌ NO 'Content-Type'
         },
         body: formData
       });
@@ -153,10 +140,25 @@ const StudentReservations = () => {
     } catch (e) { alert(e.message); }
   };
 
+  const handlePay = async (reserva) => {
+    try {
+      const res = await axios.post(`${API_URL}/stripe/create-checkout-session`, reserva, {
+        headers: { Authorization: `Bearer ${jwtToken}` }
+      });
+
+      if (res.data?.url) {
+        window.location.href = res.data.url;
+      } else {
+        alert('No se pudo generar la sesión de pago');
+      }
+    } catch (err) {
+      console.error('Error iniciando pago:', err);
+      alert('Error al redirigir a Stripe');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 p-8 relative">
-
-      {/* MODAL DE REPORTE */}
       {reportModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-200">
@@ -172,21 +174,12 @@ const StudentReservations = () => {
             </p>
 
             <form onSubmit={submitReport} className="space-y-4">
-              <input
-                className="w-full border p-3 rounded-lg"
-                placeholder="Título del problema (ej: Teclado dañado)"
-                value={reportForm.titulo}
-                onChange={e => setReportForm({ ...reportForm, titulo: e.target.value })}
-              />
+              <input className="w-full border p-3 rounded-lg" placeholder="Título del problema"
+                value={reportForm.titulo} onChange={e => setReportForm({ ...reportForm, titulo: e.target.value })} />
 
-              <textarea
-                className="w-full border p-3 rounded-lg h-32 resize-none"
-                placeholder="Describe qué sucedió..."
-                value={reportForm.descripcion}
-                onChange={e => setReportForm({ ...reportForm, descripcion: e.target.value })}
-              />
+              <textarea className="w-full border p-3 rounded-lg h-32 resize-none" placeholder="Describe qué sucedió..."
+                value={reportForm.descripcion} onChange={e => setReportForm({ ...reportForm, descripcion: e.target.value })} />
 
-              {/* ✅ NUEVO: SUBIR IMAGEN */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                   Adjuntar imagen (opcional)
@@ -198,20 +191,13 @@ const StudentReservations = () => {
                     <span className="text-sm font-semibold text-slate-700">
                       {reportImage ? "Cambiar imagen" : "Subir imagen"}
                     </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => setReportImage(e.target.files?.[0] || null)}
-                    />
+                    <input type="file" accept="image/*" className="hidden"
+                      onChange={(e) => setReportImage(e.target.files?.[0] || null)} />
                   </label>
 
                   {reportImage && (
-                    <button
-                      type="button"
-                      onClick={() => setReportImage(null)}
-                      className="text-sm font-semibold text-slate-500 hover:text-slate-700"
-                    >
+                    <button type="button" onClick={() => setReportImage(null)}
+                      className="text-sm font-semibold text-slate-500 hover:text-slate-700">
                       Quitar
                     </button>
                   )}
@@ -224,10 +210,8 @@ const StudentReservations = () => {
                 )}
               </div>
 
-              <button
-                disabled={sendingReport}
-                className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 disabled:bg-slate-400 flex items-center justify-center gap-2"
-              >
+              <button disabled={sendingReport}
+                className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 disabled:bg-slate-400 flex items-center justify-center gap-2">
                 <Send size={18} />
                 {sendingReport ? 'Enviando...' : 'Enviar Reporte'}
               </button>
@@ -269,19 +253,22 @@ const StudentReservations = () => {
                   <td className="px-6 py-4 text-right">
                     {reservation.status !== 'Cancelada' && (
                       <div className="flex justify-end gap-3">
-                        <button
-                          className="text-slate-400 hover:text-red-600 text-sm font-medium"
-                          onClick={() => handleCancel(reservation.id)}
-                        >
+                        <button className="text-slate-400 hover:text-red-600 text-sm font-medium"
+                          onClick={() => handleCancel(reservation.id)}>
                           Cancelar
                         </button>
 
-                        <button
-                          onClick={() => openReportModal(reservation)}
-                          className="flex items-center gap-1 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1 rounded text-sm font-bold transition-colors"
-                        >
+                        <button onClick={() => openReportModal(reservation)}
+                          className="flex items-center gap-1 text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1 rounded text-sm font-bold transition-colors">
                           Reportar
                         </button>
+
+                        {reservation.status === 'Pendiente' && (
+                          <button onClick={() => handlePay(reservation)}
+                            className="flex items-center gap-1 text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm font-bold transition-colors">
+                            <CreditCard size={16} /> Pagar
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>

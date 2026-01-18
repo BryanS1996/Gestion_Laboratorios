@@ -9,7 +9,6 @@ import Configuracion from '../pages/admin/Configuracion';
 import Catalog from '../pages/Catalog';
 import StudentReservations from '../pages/StudentReservations';
 import Reportes from '../pages/Reportes';
-
 import ProtectedRoute from './ProtectedRoute';
 
 // ✅ Layout con sidebar
