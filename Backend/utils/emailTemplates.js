@@ -1,10 +1,4 @@
-exports.reservaConfirmacionHTML = ({
-  nombre,
-  laboratorio,
-  fecha,
-  horario,
-  reservaId,
-}) => `
+exports.reservaConfirmacionHTML = ({ nombre, laboratorio, fecha, horario, reservaId }) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -53,16 +47,13 @@ exports.reservaConfirmacionHTML = ({
     </div>
     <div class="content">
       <p>Hola <strong>${nombre}</strong>,</p>
-
       <p>Tu reserva ha sido registrada exitosamente.</p>
-
       <div class="info">
         <p><strong>Laboratorio:</strong> ${laboratorio}</p>
         <p><strong>Fecha:</strong> ${fecha}</p>
         <p><strong>Horario:</strong> ${horario}</p>
         <p><strong>ID Reserva:</strong> ${reservaId}</p>
       </div>
-
       <p>Gracias por utilizar el sistema de gestión de laboratorios.</p>
     </div>
     <div class="footer">

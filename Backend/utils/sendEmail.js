@@ -1,10 +1,7 @@
-// utils/sendEmail.js
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: parseInt(process.env.MAIL_PORT),
-  secure: false, // true para 465, false para 587
+  service: 'gmail',
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
@@ -12,14 +9,18 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendEmail({ to, subject, html }) {
+  if (!process.env.MAIL_USER || !process.env.MAIL_PASS) {
+    throw new Error('MAIL_USER o MAIL_PASS no definidos');
+  }
+
   const info = await transporter.sendMail({
-    from: process.env.MAIL_FROM,
+    from: `"Laboratorios FI" <${process.env.MAIL_USER}>`,
     to,
     subject,
     html,
   });
 
-  console.log(`✅ Email enviado a ${to}: ${info.messageId}`);
+  console.log('✅ Email enviado:', info.messageId);
 }
 
 module.exports = sendEmail;

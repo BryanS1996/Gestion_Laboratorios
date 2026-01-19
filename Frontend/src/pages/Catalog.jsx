@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ReservationModal from '../components/ReservationModal';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
 import {
   Search,
   CalendarDays,
@@ -13,6 +13,7 @@ import {
   MapPin,
   Clock,
   LogOut,
+  CheckCircle2,
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -20,6 +21,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const Catalog = () => {
   const { user, loading, logout, jwtToken } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLab, setSelectedLab] = useState(null);
@@ -29,6 +31,11 @@ const Catalog = () => {
   const [typeFilter, setTypeFilter] = useState('Todos');
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
 
+  // ✅ Para mostrar notificación verde si se reservó correctamente
+  const [showSuccess, setShowSuccess] = useState(
+    location.state?.reservationCreated || false
+  );
+
   useEffect(() => {
     const loadLabs = async () => {
       if (!jwtToken) return;
@@ -37,42 +44,11 @@ const Catalog = () => {
           headers: { Authorization: `Bearer ${jwtToken}` },
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error cargando laboratorios');
-
-        // Soporta ambas respuestas: array directo o { laboratorios: [...] }
         const list = Array.isArray(data) ? data : (data.laboratorios || []);
         setLabs(list);
       } catch (e) {
-        // Fallback a labs simulados si Firestore aún no tiene datos
-        setLabs([
-          {
-            id: 'lab-computacion-a',
-            nombre: 'Laboratorio de Computación A',
-            tipo: 'Computación',
-            estado: 'Disponible',
-            descripcion: 'Equipos modernos para desarrollo de software.',
-            capacidad: 30,
-            ubicacion: 'PC 8th Edificio, Monterosa 2F',
-          },
-          {
-            id: 'lab-redes-b',
-            nombre: 'Laboratorio de Redes B',
-            tipo: 'Redes',
-            estado: 'Disponible',
-            descripcion: 'Herramientas para configuración de redes.',
-            capacidad: 20,
-            ubicacion: 'Bloque B, Sótano',
-          },
-          {
-            id: 'lab-quimica',
-            nombre: 'Laboratorio de Química',
-            tipo: 'Química',
-            estado: 'Ocupado',
-            descripcion: 'Equipamiento para prácticas de química.',
-            capacidad: 25,
-            ubicacion: 'Módulo C',
-          },
-        ]);
+        console.error('Error cargando laboratorios:', e.message);
+        setLabs([]);
       }
     };
     loadLabs();
@@ -109,7 +85,6 @@ const Catalog = () => {
 
   const normalizeEstado = (lab) => {
     const estado = String(lab.estado || 'Disponible').toLowerCase();
-    // consideramos ocupado si coincide con "ocupado" o "no_disponible"
     const ocupado = estado === 'ocupado' || estado === 'no_disponible';
     return { ocupado, label: ocupado ? 'Ocupado' : 'Disponible' };
   };
@@ -127,7 +102,6 @@ const Catalog = () => {
     openModalFor(lab);
   };
 
-  // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
   const handleReserve = async (reservationData) => {
     try {
       const res = await fetch(`${API_URL}/reservas`, {
@@ -139,26 +113,19 @@ const Catalog = () => {
         body: JSON.stringify(reservationData),
       });
       const data = await res.json();
-      
       if (!res.ok) throw new Error(data.error || 'Error creando reserva');
 
-      // 1. Cerramos el modal actual
       setModalOpen(false);
-
-      // 2. Redirigimos a "Mis Reservas" pasando los datos de la reserva creada
-      navigate('/mis-reservas', { 
-        state: { 
-          reservationCreated: true, 
-          reservationData: reservationData // Enviamos los datos para mostrarlos en el modal verde
-        } 
+      navigate('/mis-reservas', {
+        state: {
+          reservationCreated: true,
+          reservationData: data.reserva || reservationData,
+        },
       });
-
     } catch (e) {
       alert(`❌ ${e.message}`);
-      throw e;
     }
   };
-  // -------------------------------------
 
   if (loading) {
     return (
@@ -170,12 +137,10 @@ const Catalog = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Top bar */}
+      {/* ✅ Barra de navegación */}
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
-            FI
-          </div>
+          <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">FI</div>
 
           <div className="min-w-[170px]">
             <p className="text-sm font-semibold text-slate-800">Facultad de Ingeniería</p>
@@ -224,11 +189,25 @@ const Catalog = () => {
       </header>
 
       <div className="max-w-6xl mx-auto px-6 py-6">
-        {/* Filters */}
+        {/* ✅ Mensaje de éxito */}
+        {showSuccess && (
+          <div className="mb-4 p-4 rounded-xl bg-green-100 border border-green-300 text-green-800 flex items-center gap-2">
+            <CheckCircle2 className="text-green-600" />
+            <span>Reserva realizada con éxito</span>
+            <button
+              onClick={() => setShowSuccess(false)}
+              className="ml-auto text-green-700 font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Filtros */}
         <div className="flex flex-col md:flex-row md:items-end gap-4">
           <div className="flex items-center gap-2">
             <Filter size={18} className="text-slate-400" />
-            <label className="text-xs font-semibold text-slate-500">Tipo de Laboratorio</label>
+            <label className="text-xs font-semibold text-slate-500">Tipo</label>
           </div>
 
           <select
@@ -241,7 +220,6 @@ const Catalog = () => {
                 {t}
               </option>
             ))}
-            {!tipos.length && <option>Todos</option>}
           </select>
 
           <div className="flex items-center gap-2 md:ml-6">
@@ -249,20 +227,18 @@ const Catalog = () => {
             <label className="text-xs font-semibold text-slate-500">Fecha</label>
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-200 bg-white"
-            />
-            <button
-              onClick={() => setFecha(new Date().toISOString().split('T')[0])}
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold"
-            >
-              Hoy
-            </button>
-          </div>
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 bg-white"
+          />
+          <button
+            onClick={() => setFecha(new Date().toISOString().split('T')[0])}
+            className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold"
+          >
+            Hoy
+          </button>
 
           <div className="md:ml-auto text-sm text-slate-500">
             Mostrando <span className="font-semibold text-slate-700">{filteredLabs.length}</span> de{' '}
@@ -270,7 +246,7 @@ const Catalog = () => {
           </div>
         </div>
 
-        {/* Cards */}
+        {/* Tarjetas de laboratorios */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredLabs.map((lab) => {
             const Icon = getLabIcon(lab);
@@ -288,8 +264,6 @@ const Catalog = () => {
 
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="font-bold text-slate-800 leading-tight">{lab.nombre}</h3>
-
-                    {/* Badge con punto (igual a la imagen) */}
                     <span
                       className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
                         !ocupado
@@ -304,9 +278,7 @@ const Catalog = () => {
                     </span>
                   </div>
 
-                  <p className="text-sm text-slate-500 mt-2 line-clamp-2">
-                    {lab.descripcion || 'Sin descripción'}
-                  </p>
+                  <p className="text-sm text-slate-500 mt-2 line-clamp-2">{lab.descripcion || 'Sin descripción'}</p>
 
                   <div className="mt-4 space-y-2 text-sm text-slate-600">
                     {lab.capacidad != null && (
@@ -323,7 +295,6 @@ const Catalog = () => {
                       </div>
                     )}
 
-                    {/* Ver horario clickeable */}
                     <button
                       onClick={() => openModalFor(lab)}
                       className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -39,12 +40,14 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
   }, [isOpen, lab?.id, date, jwtToken]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!lab?.id) return;
-    if (!date) return alert('Por favor, selecciona una fecha');
-    if (!selectedSlot) return alert('Selecciona un horario disponible');
+  e.preventDefault();
 
-    await onReserve({
+  if (!lab?.id) return;
+  if (!date) return alert('Por favor, selecciona una fecha');
+  if (!selectedSlot) return alert('Selecciona un horario disponible');
+
+  try {
+    const res = await onReserve({
       laboratorioId: lab.id,
       laboratorioNombre: lab.nombre,
       fecha: date,
@@ -52,8 +55,18 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
       horaFin: selectedSlot.end,
     });
 
+    toast.success('✅ ¡Reserva confirmada correctamente!');
     onClose();
-  };
+
+    // ✅ Notificar que se creó una reserva
+    if (res && typeof res === 'object' && res.refresh) {
+      res.refresh(); // Llama a la función que recarga las reservas
+    }
+
+  } catch (err) {
+    toast.error('❌ Error al reservar. Intenta nuevamente.');
+  }
+};
 
   if (!isOpen) return null;
 

@@ -159,6 +159,14 @@ const StudentReservations = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 p-8 relative">
+      {newReservationDetails && (
+        <div className="bg-green-100 border border-green-300 text-green-800 px-6 py-4 rounded-xl mb-6 shadow-md max-w-4xl mx-auto animate-fade-in">
+          <h2 className="text-lg font-bold mb-2">✅ Reserva realizada con éxito</h2>
+          <p><strong>Laboratorio:</strong> {newReservationDetails.laboratorioNombre}</p>
+          <p><strong>Fecha:</strong> {newReservationDetails.fecha}</p>
+          <p><strong>Horario:</strong> {newReservationDetails.horaInicio}:00 - {newReservationDetails.horaFin}:00</p>
+        </div>
+      )}
       {reportModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 animate-in zoom-in-95 duration-200">

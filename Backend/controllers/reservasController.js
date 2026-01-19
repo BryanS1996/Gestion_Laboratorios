@@ -1,7 +1,7 @@
 const admin = require('../firebaseAdmin');
 const db = admin.firestore();
 const Stripe = require('stripe');
-const sendEmail = require('../utils/SendEmail');
+const { confirmacionReserva } = require('../services/mailer');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -57,23 +57,6 @@ const getAvailability = async (req, res) => {
 };
 
 /* =======================
-   MIS RESERVAS
-======================= */
-const getMyReservas = async (req, res) => {
-  const uid = req.user.uid;
-
-  const snap = await db
-    .collection('reservas')
-    .where('userId', '==', uid)
-    .orderBy('createdAt', 'desc')
-    .get();
-
-  res.json({
-    reservas: snap.docs.map(d => ({ id: d.id, ...d.data() })),
-  });
-};
-
-/* =======================
    RESERVA BÁSICA
 ======================= */
 const createReserva = async (req, res) => {
@@ -102,21 +85,37 @@ const createReserva = async (req, res) => {
 
   const ref = await db.collection('reservas').add(reserva);
 
-  await sendEmail({
-    to: req.user.email,
-    subject: '✅ Reserva confirmada',
-    html: `
-      <h2>Reserva confirmada</h2>
-      <p><b>Laboratorio:</b> ${laboratorioNombre}</p>
-      <p><b>Fecha:</b> ${fecha}</p>
-      <p><b>Horario:</b> ${horaInicio}:00 - ${horaFin}:00</p>
-      <p>ID de reserva: <b>${ref.id}</b></p>
-    `,
-  });
+  await confirmacionReserva({
+    userEmail: req.user.email,
+    userNombre: req.user.nombre || 'Usuario',
+    laboratorioNombre,
+    fecha,
+    horaInicio: Number(horaInicio),
+    horaFin: Number(horaFin),
+    reservaId: ref.id,
+  }, false); // "reserva sin pago"
 
   res.status(201).json({ id: ref.id, ...reserva });
 };
+/* =======================
+   MIS RESERVAS
+======================= */
+const getMyReservas = async (req, res) => {
+  const uid = req.user.uid;
+  console.log('[🔥 UID]', uid); // ✅ Verifica que el UID llega bien
 
+  const snap = await db
+    .collection('reservas')
+    .where('userId', '==', uid)
+    .orderBy('createdAt', 'desc')
+    .get();
+    console.log('[📦 Reservas encontradas]', snap.size); // ✅ ¿Cuántas reservas devuelve?
+
+  const reservas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  console.log('[🧾 Reservas]', reservas);
+
+  res.json({ reservas });
+};
 /* =======================
    STRIPE PAYMENT INTENT
 ======================= */
