@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ReservationModal from '../components/ReservationModal';
 import { useAuth } from '../hooks/useAuth';
+import toast, { Toaster } from 'react-hot-toast'; 
 import {
   Filter,
   CalendarDays,
@@ -12,6 +13,7 @@ import {
   MapPin,
   Clock,
   CheckCircle2,
+  CreditCard
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -25,16 +27,10 @@ const Catalog = () => {
   const [selectedLab, setSelectedLab] = useState(null);
   const [labs, setLabs] = useState([]);
   
-  // Guardamos las reservas ya filtradas del día
   const [reservasDelDia, setReservasDelDia] = useState([]);
-
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('Todos');
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
-
-  const [showSuccess, setShowSuccess] = useState(
-    location.state?.reservationCreated || false
-  );
 
   // 1. Cargar Laboratorios
   useEffect(() => {
@@ -49,13 +45,13 @@ const Catalog = () => {
         setLabs(list);
       } catch (e) {
         console.error('Error cargando laboratorios:', e.message);
-        setLabs([]);
+        toast.error('Error al cargar laboratorios');
       }
     };
     loadLabs();
   }, [jwtToken]);
 
-  // 2. Cargar Reservas (Lógica limpia gracias al backend)
+  // ✅ 2. Cargar Reservas (FILTRO ROBUSTO PARA CORREGIR "DISPONIBLE")
   useEffect(() => {
     const cargarReservasFecha = async () => {
       if (!jwtToken) return;
@@ -66,8 +62,29 @@ const Catalog = () => {
         const data = await res.json();
         const listaReservas = data.reservas || [];
         
-        // Backend manda "2026-01-20", Frontend tiene "2026-01-20". ¡Coincidencia perfecta!
-        const delDia = listaReservas.filter(r => r.fecha === fecha);
+        // --- AQUÍ ESTÁ LA CORRECCIÓN DE DISPONIBILIDAD ---
+        // Este filtro revisa si la fecha coincide, sin importar si es texto o Timestamp
+        const delDia = listaReservas.filter(r => {
+            if (!r.fecha) return false;
+            
+            // Caso A: El backend ya lo manda arreglado como texto "2026-01-20"
+            if (typeof r.fecha === 'string') {
+              return r.fecha.startsWith(fecha);
+            } 
+            
+            // Caso B: El backend manda objeto Firebase {_seconds: ...}
+            if (r.fecha._seconds) {
+               // Convertimos a fecha JS
+               const dateObj = new Date(r.fecha._seconds * 1000);
+               // Obtenemos YYYY-MM-DD en UTC (formato estándar)
+               const fechaUTC = dateObj.toISOString().split('T')[0];
+               // Obtenemos YYYY-MM-DD Local por si acaso
+               const fechaLocal = dateObj.toLocaleDateString('en-CA'); // Formato ISO local
+
+               return fechaUTC === fecha || fechaLocal === fecha;
+            }
+            return false;
+        });
         
         setReservasDelDia(delDia);
       } catch (error) {
@@ -77,11 +94,20 @@ const Catalog = () => {
     cargarReservasFecha();
   }, [fecha, jwtToken]);
 
+  // Detectar retorno de pago cancelado
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('payment') === 'cancelled') {
+      toast.error('El proceso de pago fue cancelado.', { duration: 5000 });
+      // Limpiamos la URL
+      navigate('/catalogo', { replace: true });
+    }
+  }, [location, navigate]);
+
+  // Filtros
   const tipos = useMemo(() => {
     const set = new Set(['Todos']);
-    labs.forEach((l) => {
-      if (l.tipo) set.add(l.tipo);
-    });
+    labs.forEach((l) => { if (l.tipo) set.add(l.tipo); });
     return Array.from(set);
   }, [labs]);
 
@@ -106,42 +132,31 @@ const Catalog = () => {
     return Monitor;
   };
 
-  // 3. Lógica matemática para "Agotado"
+  // ✅ 3. Lógica "Agotado" (Suma de horas)
   const normalizeEstado = (lab) => {
-    const HORAS_TOTALES_DIA = 10; // Capacidad total diaria
-
+    const HORAS_TOTALES_DIA = 10; 
     const labIdActual = String(lab.id || lab._id);
 
-    // Filtrar reservas de este lab
     const reservasEsteLab = reservasDelDia.filter(r => {
       const resLabId = String(r.laboratorioId);
       const esActiva = r.estado !== 'cancelada';
       return resLabId === labIdActual && esActiva;
     });
 
-    // Sumar duración (fin - inicio)
     const horasOcupadas = reservasEsteLab.reduce((total, r) => {
       const inicio = parseInt(r.horaInicio);
       const fin = parseInt(r.horaFin);
       return total + (fin - inicio);
     }, 0);
 
-    // ¿Está lleno?
     const estaLleno = horasOcupadas >= HORAS_TOTALES_DIA;
-    
-    // Estados manuales y automáticos
     const estadoStr = String(lab.estado || '').toLowerCase();
+    
     if (estadoStr === 'mantenimiento') return { ocupado: true, label: 'Mantenimiento', color: 'red' };
     if (estadoStr === 'ocupado') return { ocupado: true, label: 'Ocupado', color: 'red' };
-    
-    // Si está lleno por horas
     if (estaLleno) return { ocupado: true, label: 'Agotado', color: 'red' };
 
-    return { 
-      ocupado: false, 
-      label: 'Disponible',
-      color: 'green' 
-    };
+    return { ocupado: false, label: 'Disponible', color: 'green' };
   };
 
   const openModalFor = (lab) => {
@@ -149,18 +164,10 @@ const Catalog = () => {
     setModalOpen(true);
   };
 
-  const handleReserveClick = (lab) => {
-    if (user?.role !== 'student') {
-      alert('Solo los estudiantes pueden hacer reservas.');
-      return;
-    }
-    openModalFor(lab);
-  };
-
-  const handlePremiumPayment = async (lab) => {
-    if (!confirm('💳 Este laboratorio es premium y requiere pago. ¿Deseas continuar al pago?')) {
-      return;
-    }
+  // --- LÓGICA DE PAGOS ---
+  const processPremiumPayment = async (reservationData, toastId) => {
+    toast.dismiss(toastId); 
+    const loadingToast = toast.loading('Iniciando pasarela de pago...');
 
     try {
       const res = await fetch(`${API_URL}/stripe/create-checkout-session`, {
@@ -170,11 +177,12 @@ const Catalog = () => {
           Authorization: `Bearer ${jwtToken}`,
         },
         body: JSON.stringify({
-          laboratorioId: lab.id,
-          fecha,
-          horaInicio: 7, 
-          horaFin: 9,
-          motivo: 'Reserva premium',
+          laboratorioId: selectedLab.id,
+          laboratorioNombre: selectedLab.nombre,
+          fecha: reservationData.fecha,
+          horaInicio: reservationData.horaInicio,
+          horaFin: reservationData.horaFin,
+          precio: 5.00,
         }),
       });
 
@@ -182,16 +190,20 @@ const Catalog = () => {
       if (!res.ok) throw new Error(data.error || 'Error iniciando pago');
       
       if (data.url) {
-        window.location.href = data.url;
+        toast.success('Redirigiendo a Stripe...', { id: loadingToast });
+        setTimeout(() => {
+           window.location.href = data.url;
+        }, 1000);
       } else {
-        alert('❌ No se recibió URL de pago');
+        toast.error('No se recibió la URL de pago', { id: loadingToast });
       }
     } catch (error) {
-      alert(`❌ Error al iniciar pago: ${error.message}`);
+      toast.error(`Error: ${error.message}`, { id: loadingToast });
     }
   };
 
-  const handleReserve = async (reservationData) => {
+  const processStandardReservation = async (reservationData) => {
+    const loadingToast = toast.loading('Procesando reserva...');
     try {
       const res = await fetch(`${API_URL}/reservas`, {
         method: 'POST',
@@ -205,6 +217,8 @@ const Catalog = () => {
       if (!res.ok) throw new Error(data.error || 'Error creando reserva');
 
       setModalOpen(false);
+      toast.success('¡Reserva creada con éxito!', { id: loadingToast });
+      
       navigate('/mis-reservas', {
         state: {
           reservationCreated: true,
@@ -212,20 +226,63 @@ const Catalog = () => {
         },
       });
     } catch (e) {
-      alert(`❌ ${e.message}`);
+      toast.error(e.message, { id: loadingToast });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full text-slate-600">
-        Cargando...
-      </div>
-    );
-  }
+  // Manejador del botón del Modal
+  const handleReserve = (reservationData) => {
+    const isPremium = selectedLab?.tipoAcceso === 'premium' || selectedLab?.tipoAcceso === 'Premium';
+
+    if (isPremium) {
+      toast((t) => (
+        <div className="flex flex-col gap-2 min-w-[300px]">
+          <div className="flex items-start gap-3">
+             <div className="bg-blue-100 p-2 rounded-full text-blue-600">
+                <CreditCard size={24} />
+             </div>
+             <div>
+                <h3 className="font-bold text-gray-900">Laboratorio Premium</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Esta reserva requiere un pago de <strong>$5.00</strong>. 
+                  ¿Deseas continuar a la pasarela de pago?
+                </p>
+             </div>
+          </div>
+          <div className="flex gap-2 mt-4 justify-end">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => processPremiumPayment(reservationData, t.id)}
+              className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+            >
+              Sí, ir a Pagar
+            </button>
+          </div>
+        </div>
+      ), {
+        duration: Infinity,
+        position: 'top-center',
+        style: {
+           background: '#fff',
+           padding: '16px',
+           borderRadius: '12px',
+           boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+           border: '1px solid #e5e7eb'
+        }
+      });
+    } else {
+      processStandardReservation(reservationData);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center p-10">Cargando...</div>;
 
   return (
-    // ✅ AQUÍ ESTÁ EL FONDO QUE PEDISTE
     <div 
       className="min-h-screen flex flex-col p-4 relative z-10 animate-moveBg"
       style={{
@@ -236,14 +293,7 @@ const Catalog = () => {
         backgroundRepeat: "repeat"
       }}
     >
-      
-      {showSuccess && (
-        <div className="mb-4 p-4 rounded-xl bg-green-100 border border-green-300 text-green-800 flex items-center gap-2">
-          <CheckCircle2 className="text-green-600" />
-          <span>Reserva realizada con éxito</span>
-          <button onClick={() => setShowSuccess(false)} className="ml-auto text-green-700 font-bold">✕</button>
-        </div>
-      )}
+      <Toaster position="top-center" reverseOrder={false} />
 
       {/* FILTROS */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center">
@@ -286,7 +336,6 @@ const Catalog = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
         {filteredLabs.map((lab) => {
           const Icon = getLabIcon(lab);
-          // Calculamos estado (disponible/agotado)
           const { ocupado, label, color } = normalizeEstado(lab);
           const esPremium = lab.tipoAcceso === 'premium' || lab.tipoAcceso === 'Premium';
 
@@ -303,7 +352,6 @@ const Catalog = () => {
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
-                    {/* Badge de Estado */}
                     <span
                       className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
                         color === 'red'
@@ -351,16 +399,15 @@ const Catalog = () => {
                   </button>
                 </div>
 
-                {/* BOTÓN RESERVAR */}
                 <button
                   onClick={() => {
-                    if (esPremium) {
-                      handlePremiumPayment(lab);
+                    if (user?.role !== 'student') {
+                      toast.error('Solo los estudiantes pueden hacer reservas.');
                     } else {
-                      handleReserveClick(lab);
+                      openModalFor(lab);
                     }
                   }}
-                  disabled={ocupado} // Deshabilitado si está lleno
+                  disabled={ocupado}
                   className={`mt-auto w-full px-4 py-3 rounded-xl font-semibold text-sm transition-all shadow-sm active:scale-95 ${
                     !ocupado
                       ? (esPremium 

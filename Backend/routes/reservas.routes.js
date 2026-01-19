@@ -1,27 +1,34 @@
 const express = require('express');
 const router = express.Router();
+
+// Importamos el middleware tal como lo usas (como función factory)
 const authMiddleware = require('../middleware/authMiddleware');
+
 const {
   getAvailability,
   getMyReservas,
-  getAllReservations,
+  getAllReservations, // ✅ Asegúrate que esto esté en el controller
   createReserva,
   cancelReserva,
 } = require('../controllers/reservasController');
 
-// Disponibilidad por laboratorio y día
+/* =========================================
+   RUTAS DE RESERVAS
+========================================= */
+
+// 1. Disponibilidad (Slots para el modal)
 router.get('/availability', authMiddleware(), getAvailability);
 
-// Reservas del usuario actual
+// 2. Mis Reservas (Historial del usuario)
 router.get('/mine', authMiddleware(), getMyReservas);
 
-// Crear reserva (student/professor)
+// 3. Crear Reserva (Solo estudiantes y profesores)
 router.post('/', authMiddleware(['student', 'professor']), createReserva);
 
-// Cancelar reserva (dueño o admin)
+// 4. Cancelar Reserva (Cualquier usuario autenticado puede intentar, el controlador valida si es dueño)
 router.patch('/:id/cancel', authMiddleware(), cancelReserva);
 
-// Disponibilidad de laboratorios
-router.get('/', authMiddleware(),getAllReservations);
+// 5. ✅ OBTENER TODAS (Para el Catálogo - Esta era la que fallaba 404)
+router.get('/', authMiddleware(), getAllReservations);
 
 module.exports = router;

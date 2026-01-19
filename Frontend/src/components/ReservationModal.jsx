@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { toast } from 'react-toastify'; // Ojo: Si usas react-hot-toast en Catalog, deberías usarlo aquí también para consistencia.
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
-  const [date, setDate] = useState('');
+// ✅ Agregamos 'defaultDate' a los props recibidos
+const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDate }) => {
+  const [date, setDate] = useState(defaultDate || '');
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,8 +17,16 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
     return d.toISOString().split('T')[0];
   }, []);
 
+  // ✅ NUEVO: Sincronizar fecha cuando se abre el modal
+  useEffect(() => {
+    if (isOpen && defaultDate) {
+      setDate(defaultDate);
+    }
+  }, [isOpen, defaultDate]);
+
   useEffect(() => {
     const loadSlots = async () => {
+      // Validamos que haya fecha antes de buscar
       if (!isOpen || !lab?.id || !date || !jwtToken) return;
       try {
         setLoading(true);
@@ -40,39 +49,38 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
   }, [isOpen, lab?.id, date, jwtToken]);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!lab?.id) return;
-  if (!date) return alert('Por favor, selecciona una fecha');
-  if (!selectedSlot) return alert('Selecciona un horario disponible');
+    if (!lab?.id) return;
+    if (!date) return alert('Por favor, selecciona una fecha');
+    if (!selectedSlot) return alert('Selecciona un horario disponible');
 
-  try {
-    const res = await onReserve({
-      laboratorioId: lab.id,
-      laboratorioNombre: lab.nombre,
-      fecha: date,
-      horaInicio: selectedSlot.start,
-      horaFin: selectedSlot.end,
-    });
+    try {
+      // Llamamos a la función del padre (Catalog.jsx)
+      const res = await onReserve({
+        laboratorioId: lab.id,
+        laboratorioNombre: lab.nombre,
+        fecha: date,
+        horaInicio: selectedSlot.start,
+        horaFin: selectedSlot.end,
+      });
 
-    toast.success('✅ ¡Reserva confirmada correctamente!');
-    onClose();
-
-    // ✅ Notificar que se creó una reserva
-    if (res && typeof res === 'object' && res.refresh) {
-      res.refresh(); // Llama a la función que recarga las reservas
+      // Nota: Si onReserve maneja el éxito/error en el padre (Catalog), 
+      // quizás no necesites estos toasts aquí duplicados.
+      // Pero los dejo por si acaso tu lógica actual los requiere.
+      
+      // onClose(); // Esto lo suele manejar el padre tras el éxito
+    } catch (err) {
+      console.error(err);
+      toast.error('❌ Error al reservar.');
     }
-
-  } catch (err) {
-    toast.error('❌ Error al reservar. Intenta nuevamente.');
-  }
-};
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4 animate-fade-in-up">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h2 className="text-xl font-bold text-slate-800">Reservar laboratorio</h2>
@@ -82,7 +90,9 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
             <X size={24} />
           </button>
         </div>
+        
         <form onSubmit={handleSubmit}>
+          {/* Info Lab */}
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 text-sm text-slate-700">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {lab?.capacidad != null && <span>👥 Capacidad: <b>{lab.capacidad}</b></span>}
@@ -90,6 +100,8 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
               {lab?.tipo && <span>🧪 {lab.tipo}</span>}
             </div>
           </div>
+
+          {/* INPUT FECHA BLOQUEADO */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 mb-1">Fecha</label>
             <input
@@ -97,10 +109,17 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
               value={date}
               onChange={(e) => setDate(e.target.value)}
               min={minDate}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              // 🔒 AQUÍ ESTÁ EL BLOQUEO
+              disabled={true} 
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none bg-slate-100 text-slate-500 cursor-not-allowed"
               required
             />
+            <p className="text-xs text-slate-400 mt-1 italic">
+              * Para cambiar la fecha, cierra esta ventana y selecciónala en el catálogo.
+            </p>
           </div>
+
+          {/* HORARIOS */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-slate-700">Horario</label>
@@ -110,9 +129,9 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
             {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
 
             {!date ? (
-              <p className="text-sm text-slate-500">Selecciona una fecha para ver disponibilidad.</p>
+              <p className="text-sm text-slate-500">Fecha no válida.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
                 {slots.map((s) => {
                   const active = selectedSlot?.label === s.label;
                   return (
@@ -121,35 +140,59 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken }) => {
                       type="button"
                       disabled={!s.disponible}
                       onClick={() => s.disponible && setSelectedSlot(s)}
-                      className={`text-left px-3 py-2 rounded-md border text-sm transition
-                        ${s.disponible ? 'border-slate-300 hover:border-blue-400 hover:bg-blue-50' : 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'}
-                        ${active ? 'border-blue-600 ring-2 ring-blue-200 bg-blue-50' : ''}
+                      className={`text-left px-3 py-2 rounded-md border text-sm transition relative
+                        ${s.disponible 
+                          ? 'border-slate-300 hover:border-blue-400 hover:bg-blue-50' 
+                          : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'}
+                        ${active ? 'border-blue-600 ring-1 ring-blue-500 bg-blue-50 z-10' : ''}
                       `}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">{s.label}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${s.disponible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {s.disponible ? 'Disponible' : 'Ocupado'}
+                        <span className={`font-medium ${!s.disponible ? 'text-slate-400' : 'text-slate-700'}`}>
+                          {s.label}
                         </span>
+                        {/* Badge Ocupado/Disponible */}
+                        {!s.disponible ? (
+                           <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
+                             Ocupado
+                           </span>
+                        ) : (
+                           active && <span className="text-blue-600">✓</span>
+                        )}
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">Duración: {s.end - s.start}h</div>
+                      <div className={`text-xs mt-1 ${!s.disponible ? 'text-slate-300' : 'text-slate-500'}`}>
+                        Duración: {s.end - s.start}h
+                      </div>
                     </button>
                   );
                 })}
               </div>
             )}
+            
+            {/* Mensaje si no hay slots */}
+            {!loading && slots.length === 0 && !error && (
+              <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                No hay horarios disponibles para esta fecha.
+              </p>
+            )}
           </div>
-          <div className="flex justify-end space-x-2">
+
+          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-slate-600 border border-slate-300 rounded-md hover:bg-slate-50"
+              className="px-4 py-2 text-slate-600 border border-slate-300 rounded-md hover:bg-slate-50 text-sm font-medium transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              disabled={!selectedSlot}
+              className={`px-4 py-2 text-white rounded-md text-sm font-medium transition-colors shadow-sm
+                ${selectedSlot 
+                  ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' 
+                  : 'bg-slate-300 cursor-not-allowed'}
+              `}
             >
               Reservar
             </button>
