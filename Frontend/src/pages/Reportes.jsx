@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import {
   AlertTriangle,
-  Send,
-  History,
   CheckCircle,
   Clock,
   Trash2,
@@ -18,26 +16,36 @@ const Reportes = () => {
   const { jwtToken } = useAuth();
 
   const [misReportes, setMisReportes] = useState([]);
+  const [misReservas, setMisReservas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [imagen, setImagen] = useState(null);
 
   const [form, setForm] = useState({
     titulo: '',
-    laboratorioNombre: '',
-    laboratorioId: '',
-    descripcion: ''
+    descripcion: '',
+    reservaSeleccionada: ''
   });
-
-  const laboratoriosMap = {
-    'Laboratorio de Redes': 'LAB-REDES',
-    'Laboratorio de Software': 'LAB-SOFT',
-    'Laboratorio de Hardware': 'LAB-HARD',
-    'Laboratorio General': 'LAB-GEN'
-  };
 
   const [signedUrls, setSignedUrls] = useState({});
   const [loadingImg, setLoadingImg] = useState({});
+
+  // ✅ FUNCIÓN CORREGIDA: Maneja fechas de Firebase y texto normal
+  const formatFecha = (fechaData) => {
+    if (!fechaData) return 'Sin fecha';
+
+    // Si es un Timestamp de Firebase ({ _seconds: ... })
+    if (fechaData._seconds) {
+      return new Date(fechaData._seconds * 1000).toLocaleDateString('es-ES', {
+        day: 'numeric', month: 'short', year: 'numeric'
+      });
+    }
+
+    // Si es un string ISO normal
+    return new Date(fechaData).toLocaleDateString('es-ES', {
+      day: 'numeric', month: 'short', year: 'numeric'
+    });
+  };
 
   const cargarReportes = async () => {
     try {
@@ -46,9 +54,7 @@ const Reportes = () => {
         headers: { Authorization: `Bearer ${jwtToken}` }
       });
       const data = await res.json();
-
-      const lista = Array.isArray(data) ? data : (data.data || []);
-      setMisReportes(lista);
+      setMisReportes(data.data || []);
     } catch (error) {
       console.error("Error cargando reportes:", error);
     } finally {
@@ -56,8 +62,23 @@ const Reportes = () => {
     }
   };
 
+  const cargarReservas = async () => {
+    try {
+      const res = await fetch(`${API_URL}/reservas/mine`, {
+        headers: { Authorization: `Bearer ${jwtToken}` }
+      });
+      const data = await res.json();
+      setMisReservas(data.reservas || []);
+    } catch (error) {
+      console.error("Error cargando reservas:", error);
+    }
+  };
+
   useEffect(() => {
-    if (jwtToken) cargarReportes();
+    if (jwtToken) {
+      cargarReportes();
+      cargarReservas();
+    }
   }, [jwtToken]);
 
   const obtenerUrlFirmada = async (reporteId) => {
@@ -79,36 +100,62 @@ const Reportes = () => {
       return data.url;
     } catch (err) {
       console.error(err);
-      alert("Error obteniendo imagen");
       return null;
     } finally {
       setLoadingImg(prev => ({ ...prev, [reporteId]: false }));
     }
   };
 
-  const handleLabChange = (e) => {
-    const nombre = e.target.value;
-    setForm({
-      ...form,
-      laboratorioNombre: nombre,
-      laboratorioId: laboratoriosMap[nombre] || 'LAB-OTRO'
-    });
+  // ✅ FUNCIÓN AGREGADA: Eliminar reporte
+  const handleDelete = async (reporteId) => {
+    if (!confirm("🗑️ ¿Estás seguro de eliminar este reporte?")) return;
+
+    try {
+      const res = await fetch(`${API_URL}/reportes/${reporteId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${jwtToken}` }
+      });
+
+      if (res.ok) {
+        setMisReportes(prev => prev.filter(r => r._id !== reporteId));
+        alert("Reporte eliminado correctamente");
+      } else {
+        const data = await res.json();
+        alert(data.error || "No se pudo eliminar");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error de conexión");
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.descripcion || !form.titulo || !form.laboratorioNombre) {
+    if (!form.titulo || !form.descripcion || !form.reservaSeleccionada) {
       return alert("⚠️ Completa todos los campos.");
     }
+
+    const reserva = misReservas.find(r => r.id === form.reservaSeleccionada);
+    if (!reserva) return alert("Selecciona una reserva válida.");
 
     try {
       setSubmitting(true);
       const formData = new FormData();
       formData.append("titulo", form.titulo);
-      formData.append("laboratorioNombre", form.laboratorioNombre);
-      formData.append("laboratorioId", form.laboratorioId);
       formData.append("descripcion", form.descripcion);
+      formData.append("reservaId", reserva.id);
+      
+      // Enviamos la fecha original para que el backend la guarde bien
+      const fechaString = reserva.fecha._seconds 
+        ? new Date(reserva.fecha._seconds * 1000).toISOString() 
+        : reserva.fecha;
+      
+      formData.append("fecha", fechaString);
+      formData.append("horario", `${reserva.horaInicio}:00 - ${reserva.horaFin}:00`);
+      formData.append("tipoAcceso", reserva.tipo || 'basico');
+      formData.append("laboratorioId", reserva.laboratorioId);
+      formData.append("laboratorioNombre", reserva.laboratorioNombre);
 
       if (imagen) {
         formData.append("imagen", imagen);
@@ -121,8 +168,8 @@ const Reportes = () => {
       });
 
       if (res.ok) {
-        alert("✅ Reporte enviado");
-        setForm({ titulo: '', laboratorioNombre: '', laboratorioId: '', descripcion: '' });
+        alert("✅ Reporte enviado correctamente");
+        setForm({ titulo: '', descripcion: '', reservaSeleccionada: '' });
         setImagen(null);
         await cargarReportes();
       } else {
@@ -137,38 +184,8 @@ const Reportes = () => {
     }
   };
 
-  const handleDelete = async (reporteId) => {
-    const ok = confirm("🗑️ ¿Eliminar este reporte?");
-    if (!ok) return;
-
-    try {
-      const res = await fetch(`${API_URL}/reportes/${reporteId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${jwtToken}`
-        }
-      });
-
-      if (res.ok) {
-        setSignedUrls(prev => {
-          const copy = { ...prev };
-          delete copy[reporteId];
-          return copy;
-        });
-        setMisReportes(prev => prev.filter(r => r._id !== reporteId));
-      } else {
-        const errorData = await res.json();
-        alert(`❌ Error: ${errorData.error || 'No se pudo eliminar'}`);
-      }
-    } catch (error) {
-      console.error(error);
-      alert("❌ Error al eliminar");
-    }
-  };
-
   const toggleImagenInline = async (rep) => {
     const id = rep._id;
-
     if (signedUrls[id]) {
       setSignedUrls(prev => {
         const copy = { ...prev };
@@ -177,14 +194,14 @@ const Reportes = () => {
       });
       return;
     }
-
     await obtenerUrlFirmada(id);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* FORMULARIO */}
+        
+        {/* === COLUMNA IZQUIERDA: FORMULARIO === */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 h-fit sticky top-6">
           <div className="flex items-center gap-3 mb-6 text-red-600 border-b border-slate-100 pb-4">
             <div className="bg-red-100 p-2 rounded-lg">
@@ -192,23 +209,41 @@ const Reportes = () => {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Reportar Incidente</h2>
-              <p className="text-sm text-slate-500">Ayúdanos a mantener los laboratorios funcionando</p>
+              <p className="text-sm text-slate-500">Selecciona una reserva y describe el problema</p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <input type="text" placeholder="Título" value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })} className="w-full border p-3 rounded-xl" />
+            <input 
+              type="text" 
+              placeholder="Título" 
+              value={form.titulo} 
+              onChange={e => setForm({ ...form, titulo: e.target.value })} 
+              className="w-full border p-3 rounded-xl" 
+            />
 
-            <select value={form.laboratorioNombre} onChange={handleLabChange} className="w-full border p-3 rounded-xl">
-              <option value="">Selecciona laboratorio</option>
-              {Object.keys(laboratoriosMap).map(lab => (
-                <option key={lab} value={lab}>{lab}</option>
+            <select
+              value={form.reservaSeleccionada}
+              onChange={(e) => setForm({ ...form, reservaSeleccionada: e.target.value })}
+              className="w-full border p-3 rounded-xl"
+            >
+              <option value="">Selecciona una reserva</option>
+              {misReservas.map(res => (
+                <option key={res.id} value={res.id}>
+                  {/* ✅ AQUÍ USAMOS formatFecha PARA EVITAR EL ERROR DE OBJETO */}
+                  {res.laboratorioNombre} - {formatFecha(res.fecha)} ({res.horaInicio}:00 - {res.horaFin}:00)
+                </option>
               ))}
             </select>
 
-            <textarea rows={4} placeholder="Descripción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} className="w-full border p-3 rounded-xl" />
+            <textarea 
+              rows={4} 
+              placeholder="Descripción" 
+              value={form.descripcion} 
+              onChange={e => setForm({ ...form, descripcion: e.target.value })} 
+              className="w-full border p-3 rounded-xl" 
+            />
 
-            {/* Imagen */}
             <div>
               <label className="block mb-1 text-sm font-medium">Imagen (opcional)</label>
               <input type="file" accept="image/*" onChange={(e) => setImagen(e.target.files?.[0] || null)} />
@@ -227,7 +262,7 @@ const Reportes = () => {
           </form>
         </div>
 
-        {/* LISTADO */}
+        {/* === COLUMNA DERECHA: LISTADO === */}
         <div className="space-y-6">
           <h2 className="text-xl font-bold text-slate-800 mb-2">Mis Reportes</h2>
           {loading ? (
@@ -270,7 +305,7 @@ const Reportes = () => {
                                 return copy;
                               })}
                             />
-                            <p className="mt-2 text-xs text-slate-400">*La imagen es privada y se muestra con un enlace temporal.</p>
+                            <p className="mt-2 text-xs text-slate-400">*Imagen con enlace temporal.</p>
                           </div>
                         )}
                       </div>
@@ -278,7 +313,9 @@ const Reportes = () => {
 
                     <div className="flex justify-between items-center text-xs text-slate-400 border-t pt-2 mt-4">
                       <span className="bg-slate-100 px-2 py-1 rounded font-medium text-slate-600">{rep.laboratorioNombre}</span>
-                      <span className="flex items-center gap-1"><Clock size={14}/> {new Date(rep.fechaCreacion).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1">
+                        <Clock size={14}/> {formatFecha(rep.fechaCreacion)}
+                      </span>
                     </div>
                   </div>
                 );
