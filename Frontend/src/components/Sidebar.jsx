@@ -4,8 +4,9 @@ import { useAuth } from "../hooks/useAuth";
 
 const base =
   "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-colors";
-const active = "bg-blue-600 text-white shadow-sm";
-const inactive = "text-slate-600 hover:bg-slate-100";
+
+const active = "bg-[#ae1b2c] text-white shadow-md shadow-red-200";
+const inactive = "text-slate-600 hover:bg-slate-100 hover:text-slate-900";
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -17,26 +18,31 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-white border-r border-slate-200 px-4 py-6 flex flex-col">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-3 mb-6">
-        <div className="bg-blue-600 w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold">
-          FI
-        </div>
-        <div>
-          <p className="font-semibold text-slate-800">Sistema de Laboratorios</p>
-          <p className="text-xs text-slate-500">Facultad de Ingeniería</p>
+    <aside className="w-72 bg-white border-r border-slate-200 px-4 py-6 flex flex-col h-full">
+      
+      {/* ✅ LOGO SECTION MODIFICADA */}
+      <div className="flex flex-col items-center gap-4 mb-8"> {/* Diseño en columna y centrado */}
+        <img
+          src="/logo_uce.png" // Asegúrate de que tu imagen tenga buena resolución
+          alt="Logo Sistema de Laboratorios"
+          className="w-full max-w-[90%] h-auto object-contain shadow-sm"
+        />
+        <div className="text-center"> {/* Texto centrado */}
+          <p className="font-bold text-slate-900 text-lg leading-tight uppercase">
+            Sistema de Laboratorios
+          </p>
+          {/* Se eliminó la línea de Facultad de Ingeniería */}
         </div>
       </div>
 
-      {/* User */}
+      {/* User Card */}
       <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6">
-        <p className="text-xs text-slate-500">Sesión</p>
-        <p className="text-sm font-semibold text-slate-800 truncate">
+        <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-1">Sesión activa</p>
+        <p className="text-sm font-bold text-slate-800 truncate" title={user?.email}>
           {user?.email || "Usuario"}
         </p>
-        <p className="text-xs text-slate-500 mt-1">
-          Rol: <span className="font-medium">{user?.role || "student"}</span>
+        <p className="text-xs text-slate-500 mt-1 capitalize">
+          Rol: <span className="font-medium text-slate-700">{user?.role || "student"}</span>
         </p>
       </div>
 
@@ -77,9 +83,10 @@ export default function Sidebar() {
         )}
       </nav>
 
+      {/* Logout Button */}
       <button
         onClick={handleLogout}
-        className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+        className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-sm active:scale-95"
       >
         <LogOut className="w-5 h-5" />
         Cerrar sesión

@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const {
   getAvailability,
   getMyReservas,
+  getAllReservations,
   createReserva,
   cancelReserva,
 } = require('../controllers/reservasController');
@@ -19,5 +20,8 @@ router.post('/', authMiddleware(['student', 'professor']), createReserva);
 
 // Cancelar reserva (dueño o admin)
 router.patch('/:id/cancel', authMiddleware(), cancelReserva);
+
+// Disponibilidad de laboratorios
+router.get('/', authMiddleware(),getAllReservations);
 
 module.exports = router;

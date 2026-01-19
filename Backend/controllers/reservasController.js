@@ -93,33 +93,78 @@ const createReserva = async (req, res) => {
     horaInicio: Number(horaInicio),
     horaFin: Number(horaFin),
     reservaId: ref.id,
-  }, false); // "reserva sin pago"
+  }, false);
 
   res.status(201).json({ id: ref.id, ...reserva });
 };
+
 /* =======================
    MIS RESERVAS
 ======================= */
 const getMyReservas = async (req, res) => {
   const uid = req.user.uid;
-  console.log('[🔥 UID]', uid); // ✅ Verifica que el UID llega bien
+  console.log('[🔥 UID]', uid);
 
   const snap = await db
     .collection('reservas')
     .where('userId', '==', uid)
     .orderBy('createdAt', 'desc')
     .get();
-    console.log('[📦 Reservas encontradas]', snap.size); // ✅ ¿Cuántas reservas devuelve?
+  
+  console.log('[📦 Reservas encontradas]', snap.size);
 
   const reservas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  console.log('[🧾 Reservas]', reservas);
-
+  
   res.json({ reservas });
 };
+
+/* =======================
+   ✅ OBTENER TODAS LAS RESERVAS (CATÁLOGO)
+   Corrige el formato de fecha para el frontend
+======================= */
+const getAllReservations = async (req, res) => {
+  try {
+    const { fecha } = req.query;
+    let query = db.collection('reservas');
+
+    // Opcional: Filtrar en BD si viene fecha
+    if (fecha) {
+        const day = toDateOnly(fecha);
+        if (day) query = query.where('fecha', '==', day);
+    }
+
+    const snapshot = await query.get();
+    
+    const reservas = snapshot.docs.map(doc => {
+      const data = doc.data();
+      let fechaLimpia = "Sin fecha";
+
+      // LÓGICA DE LIMPIEZA DE FECHA (CRÍTICO)
+      if (data.fecha && data.fecha._seconds) {
+        // Convertimos Timestamp a String YYYY-MM-DD (UTC)
+        const date = new Date(data.fecha._seconds * 1000);
+        fechaLimpia = date.toISOString().split('T')[0];
+      } else if (typeof data.fecha === 'string') {
+        fechaLimpia = data.fecha.split('T')[0];
+      }
+
+      return {
+        id: doc.id, 
+        ...data,
+        fecha: fechaLimpia // Enviamos la fecha ya como string limpio
+      };
+    });
+
+    res.status(200).json({ reservas });
+  } catch (error) {
+    console.error("Error al obtener todas las reservas:", error);
+    res.status(500).json({ error: 'Error al obtener reservas del sistema' });
+  }
+};
+
 /* =======================
    STRIPE PAYMENT INTENT
 ======================= */
-// const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const createPremiumIntent = async (req, res) => {
   const {
     laboratorioId,
@@ -171,6 +216,7 @@ const cancelReserva = async (req, res) => {
 module.exports = {
   getAvailability,
   getMyReservas,
+  getAllReservations, // ✅ Asegúrate que esto esté aquí
   createReserva,
   createPremiumIntent,
   cancelReserva,
