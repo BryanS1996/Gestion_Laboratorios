@@ -102,6 +102,43 @@ const Catalog = () => {
     openModalFor(lab);
   };
 
+  // ✅ NUEVA FUNCIÓN: Maneja el pago premium para limpiar el JSX
+  const handlePremiumPayment = async (lab) => {
+    if (!confirm('💳 Este laboratorio es premium y requiere pago. ¿Deseas continuar al pago?')) {
+      return;
+    }
+
+    try {
+      // NOTA: Aquí asumo horas fijas (7-9) por tu ejemplo anterior.
+      // Lo ideal sería abrir un modal para elegir horas ANTES de pagar.
+      const res = await fetch(`${API_URL}/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({
+          laboratorioId: lab.id,
+          fecha,
+          horaInicio: 7, 
+          horaFin: 9,
+          motivo: 'Reserva premium',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error iniciando pago');
+      
+      if (data.url) {
+        window.location.href = data.url; // 🔁 Redirigir a Stripe Checkout
+      } else {
+        alert('❌ No se recibió URL de pago');
+      }
+    } catch (error) {
+      alert(`❌ Error al iniciar pago: ${error.message}`);
+    }
+  };
+
   const handleReserve = async (reservationData) => {
     try {
       const res = await fetch(`${API_URL}/reservas`, {
@@ -141,7 +178,7 @@ const Catalog = () => {
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
           <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">FI</div>
-
+          
           <div className="min-w-[170px]">
             <p className="text-sm font-semibold text-slate-800">Facultad de Ingeniería</p>
             <p className="text-xs text-slate-400">Sistema de Laboratorios</p>
@@ -173,7 +210,6 @@ const Catalog = () => {
               <p className="text-sm font-semibold text-slate-700">{user?.displayName || 'Usuario'}</p>
               <p className="text-xs text-slate-400 capitalize">{user?.role || ''}</p>
             </div>
-
             <button
               onClick={async () => {
                 await logout();
@@ -194,12 +230,7 @@ const Catalog = () => {
           <div className="mb-4 p-4 rounded-xl bg-green-100 border border-green-300 text-green-800 flex items-center gap-2">
             <CheckCircle2 className="text-green-600" />
             <span>Reserva realizada con éxito</span>
-            <button
-              onClick={() => setShowSuccess(false)}
-              className="ml-auto text-green-700 font-bold"
-            >
-              ✕
-            </button>
+            <button onClick={() => setShowSuccess(false)} className="ml-auto text-green-700 font-bold">✕</button>
           </div>
         )}
 
@@ -209,24 +240,17 @@ const Catalog = () => {
             <Filter size={18} className="text-slate-400" />
             <label className="text-xs font-semibold text-slate-500">Tipo</label>
           </div>
-
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="w-full md:w-56 px-3 py-2 rounded-xl border border-slate-200 bg-white"
           >
-            {tipos.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
+            {tipos.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
-
           <div className="flex items-center gap-2 md:ml-6">
             <CalendarDays size={18} className="text-slate-400" />
             <label className="text-xs font-semibold text-slate-500">Fecha</label>
           </div>
-
           <input
             type="date"
             value={fecha}
@@ -239,7 +263,6 @@ const Catalog = () => {
           >
             Hoy
           </button>
-
           <div className="md:ml-auto text-sm text-slate-500">
             Mostrando <span className="font-semibold text-slate-700">{filteredLabs.length}</span> de{' '}
             <span className="font-semibold text-slate-700">{labs.length}</span> laboratorios
@@ -251,6 +274,7 @@ const Catalog = () => {
           {filteredLabs.map((lab) => {
             const Icon = getLabIcon(lab);
             const { ocupado, label } = normalizeEstado(lab);
+            const esPremium = lab.tipoAcceso === 'premium';
 
             return (
               <div
@@ -263,7 +287,14 @@ const Catalog = () => {
                   </div>
 
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-bold text-slate-800 leading-tight">{lab.nombre}</h3>
+                    <div>
+                      <h3 className="font-bold text-slate-800 leading-tight">{lab.nombre}</h3>
+                      {esPremium && (
+                        <span className="mt-1 inline-flex items-center text-xs font-semibold px-2 py-1 rounded bg-yellow-100 text-yellow-800">
+                          Premium 🔒
+                        </span>
+                      )}
+                    </div>
                     <span
                       className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
                         !ocupado
@@ -271,14 +302,14 @@ const Catalog = () => {
                           : 'bg-red-50 text-red-700 ring-1 ring-red-200'
                       }`}
                     >
-                      <span
-                        className={`w-2 h-2 rounded-full ${!ocupado ? 'bg-green-500' : 'bg-red-500'}`}
-                      />
+                      <span className={`w-2 h-2 rounded-full ${!ocupado ? 'bg-green-500' : 'bg-red-500'}`} />
                       {label}
                     </span>
                   </div>
 
-                  <p className="text-sm text-slate-500 mt-2 line-clamp-2">{lab.descripcion || 'Sin descripción'}</p>
+                  <p className="text-sm text-slate-500 mt-2 line-clamp-2">
+                    {lab.descripcion || 'Sin descripción'}
+                  </p>
 
                   <div className="mt-4 space-y-2 text-sm text-slate-600">
                     {lab.capacidad != null && (
@@ -287,14 +318,12 @@ const Catalog = () => {
                         <span>Capacidad: {lab.capacidad} personas</span>
                       </div>
                     )}
-
                     {lab.ubicacion && (
                       <div className="flex items-center gap-2">
                         <MapPin size={16} className="text-slate-400" />
                         <span>{lab.ubicacion}</span>
                       </div>
                     )}
-
                     <button
                       onClick={() => openModalFor(lab)}
                       className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800"
@@ -305,15 +334,21 @@ const Catalog = () => {
                   </div>
 
                   <button
-                    onClick={() => handleReserveClick(lab)}
+                    onClick={() => {
+                      if (esPremium) {
+                        handlePremiumPayment(lab);
+                      } else {
+                        handleReserveClick(lab);
+                      }
+                    }}
                     disabled={ocupado}
                     className={`mt-5 w-full px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
                       !ocupado
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? (esPremium ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700') + ' text-white'
                         : 'bg-slate-200 text-slate-500 cursor-not-allowed'
                     }`}
                   >
-                    Reservar
+                    {esPremium ? 'Reservar Premium' : 'Reservar'}
                   </button>
                 </div>
               </div>

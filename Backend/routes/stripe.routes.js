@@ -20,7 +20,7 @@ router.post('/create-checkout-session', authMiddleware(['student', 'professor'])
     if (!labDoc.exists) return res.status(404).json({ error: 'Laboratorio no encontrado' });
 
     const lab = labDoc.data();
-    if (lab.tipo !== 'premium') {
+    if (lab.tipoAcceso !== 'premium') {
       return res.status(400).json({ error: 'Este laboratorio no requiere pago' });
     }
 
@@ -50,6 +50,9 @@ router.post('/create-checkout-session', authMiddleware(['student', 'professor'])
       metadata: {
         reservaId: reservaRef.id,
         userId: user.uid,
+        userEmail: user.email,
+        userNombre: user.displayName || 'Usuario',
+        laboratorioNombre: lab.nombre || 'Laboratorio',
       },
       line_items: [
         {
@@ -58,7 +61,8 @@ router.post('/create-checkout-session', authMiddleware(['student', 'professor'])
             product_data: {
               name: `Reserva: ${lab.nombre} (${fecha} ${horaInicio}-${horaFin})`,
             },
-            unit_amount: lab.precioUsd ? Math.round(lab.precioUsd * 100) : 200, // fallback 2 USD
+            // Multiplicamos por 100 porque Stripe maneja centavos (ej: 5.00 USD = 500 centavos)
+            unit_amount: lab.precioUsd ? Math.round(lab.precioUsd * 100) : 200, 
           },
           quantity: 1,
         },
@@ -67,10 +71,14 @@ router.post('/create-checkout-session', authMiddleware(['student', 'professor'])
       cancel_url: `${process.env.CLIENT_URL}/reservas?cancelled=true`,
     });
 
-    return res.status(200).json({ url: session.url });
+    // ✅ 4. RESPONDER AL FRONTEND (ESTO FALTABA)
+    // Devolvemos el ID de sesión y la URL para que el frontend redirija
+    res.json({ id: session.id, url: session.url });
+
   } catch (error) {
-    console.error('❌ Error creando sesión de pago:', error);
-    return res.status(500).json({ error: 'Error al generar sesión de pago' });
+    // ✅ 5. MANEJO DE ERRORES (ESTO FALTABA)
+    console.error('Error creando sesión de pago:', error);
+    res.status(500).json({ error: 'Error al iniciar el pago con Stripe' });
   }
 });
 
