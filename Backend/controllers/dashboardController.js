@@ -7,39 +7,45 @@ const getStats = async (req, res) => {
   try {
     const { reservas, updatedAt } = getReservasCache();
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    const fechaParam = req.query.fecha
+      ? new Date(req.query.fecha)
+      : new Date();
 
-    const reservasHoy = reservas.filter(r => {
+    fechaParam.setHours(0, 0, 0, 0);
+
+    // Reservas del día seleccionado
+    const reservasDia = reservas.filter(r => {
       if (!r.fecha) return false;
       const f = new Date(r.fecha);
       f.setHours(0, 0, 0, 0);
-      return f.getTime() === hoy.getTime();
+      return f.getTime() === fechaParam.getTime();
     });
 
-    const ahora = new Date().getHours();
+    // Laboratorios ocupados en ese día (hora actual)
+    const horaActual = new Date().getHours();
     const labsOcupados = new Set();
 
-    reservasHoy.forEach(r => {
-      if (r.horaInicio <= ahora && r.horaFin > ahora) {
+    reservasDia.forEach(r => {
+      if (r.horaInicio <= horaActual && r.horaFin > horaActual) {
         labsOcupados.add(r.laboratorioId);
       }
     });
 
     res.json({
       stats: {
-        reservasHoy: reservasHoy.length,
+        fecha: fechaParam.toISOString().slice(0, 10),
+        reservasHoy: reservasDia.length,
         laboratoriosOcupados: labsOcupados.size,
-        reportesPendientes: 0,
+        reportesPendientes: null,
         updatedAt,
       },
+      reservas: reservasDia, // 🔥 CLAVE
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error dashboard stats' });
+    res.status(500).json({ error: 'Error dashboard por fecha' });
   }
 };
-
 /* ============================
    📋 RESERVAS (CACHE)
    ============================ */

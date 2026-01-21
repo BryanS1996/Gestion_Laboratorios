@@ -1,46 +1,36 @@
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from './useAuth';
+import { useAuth } from './useAuth'; 
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export const useDashboard = () => {
+export const useDashboard = (fecha) => {
   const { jwtToken } = useAuth();
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: ['dashboard'],
+  const params = fecha ? `?fecha=${fecha}` : '';
+
+  return useQuery({
+    queryKey: ['dashboard', fecha],
     enabled: !!jwtToken,
 
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/dashboard/stats`, {
-        headers: {
-          Authorization: `Bearer ${jwtToken}`,
-        },
-      });
+      const res = await fetch(
+        `${API_URL}/dashboard/stats${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${jwtToken}`,
+          },
+        }
+      );
 
       if (!res.ok) {
-        throw new Error('Error cargando dashboard');
+        throw new Error('No autorizado o sin datos');
       }
 
       return res.json();
     },
 
-    // ⏱️ OPTIMIZACIÓN FIRESTORE
-    refetchInterval: 10000,      
-    staleTime: 3000,
-    cacheTime: 60000,
+    refetchInterval: 10000,
+    staleTime: 5000,
     refetchOnWindowFocus: false,
-    retry: 1,
   });
-
-  return {
-    stats: data?.stats ?? null,
-    reservas: data?.reservas ?? [],
-    loading: isLoading,
-    error: isError ? error : null,
-  };
 };
