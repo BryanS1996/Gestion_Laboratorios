@@ -11,20 +11,21 @@ import StudentReservations from '../pages/StudentReservations';
 import Reportes from '../pages/Reportes';
 import ProtectedRoute from './ProtectedRoute';
 
-// ✅ Layout con sidebar
+// Layouts
 import AppLayout from '../components/AppLayout';
+import AdminLayout from '../components/admin/AdminLayout'; // 👈 asegúrate de tenerlo
 
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Ruta raíz redirige al login */}
+      {/* Ruta raíz */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Rutas públicas */}
+      {/* Públicas */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* ✅ Grupo de rutas privadas CON SIDEBAR */}
+      {/* 🟦 RUTAS USUARIO / ESTUDIANTE */}
       <Route
         element={
           <ProtectedRoute>
@@ -32,10 +33,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
-        {/* Catálogo para profesores y estudiantes */}
         <Route path="/catalogo" element={<Catalog />} />
 
-        {/* Mis reservas (solo student) */}
         <Route
           path="/mis-reservas"
           element={
@@ -45,7 +44,6 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Reportes (solo student) */}
         <Route
           path="/reportes"
           element={
@@ -54,36 +52,24 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-
-        {/* Admin */}
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute requiredRole="admin">
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/usuarios"
-          element={
-            <ProtectedRoute requiredRole="admin">
-              <Users />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/configuracion"
-          element={
-            <ProtectedRoute requiredRole="admin">
-              <Configuracion />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
       </Route>
 
-      {/* Ruta por defecto */}
+      {/* 🟥 RUTAS ADMIN (SIN AppLayout) */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requiredRole="admin">
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="usuarios" element={<Users />} />
+        <Route path="configuracion" element={<Configuracion />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
+      </Route>
+
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
