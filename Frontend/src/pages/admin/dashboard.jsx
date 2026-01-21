@@ -19,10 +19,15 @@ ChartJS.register(
 );
 
 const Dashboard = () => {
-  const { stats, reservas, horarios, topUsuarios, loading, error } = useDashboard();
+  const {
+    stats,
+    reservas = [],
+    loading,
+    error,
+  } = useDashboard();
 
   if (loading) return <p>Cargando dashboard...</p>;
-  if (error) return <p>{String(error)}</p>;
+  if (error) return <p className="text-red-600">{String(error)}</p>;
 
   /* =========================
      GRÁFICO 1:
@@ -34,15 +39,12 @@ const Dashboard = () => {
     return acc;
   }, {});
 
-  const labsLabels = Object.keys(reservasPorLab);
-  const labsValues = Object.values(reservasPorLab);
-
   const labsChartData = {
-    labels: labsLabels,
+    labels: Object.keys(reservasPorLab),
     datasets: [
       {
         label: 'Reservas por laboratorio',
-        data: labsValues,
+        data: Object.values(reservasPorLab),
         backgroundColor: '#2563eb',
         borderRadius: 6,
       },
@@ -53,13 +55,53 @@ const Dashboard = () => {
      GRÁFICO 2:
      Horarios más concurridos
      ========================= */
+  const horariosMap = {};
+
+  reservas.forEach((r) => {
+    if (!r.horaInicio || !r.horaFin) return;
+
+    for (let h = r.horaInicio; h < r.horaFin; h++) {
+      horariosMap[h] = (horariosMap[h] || 0) + 1;
+    }
+  });
+
+  const horariosOrdenados = Object.entries(horariosMap)
+    .sort((a, b) => Number(a[0]) - Number(b[0]));
+
   const horariosChartData = {
-    labels: horarios.map(h => h.hora),
+    labels: horariosOrdenados.map(([hora]) => `${hora}:00`),
     datasets: [
       {
         label: 'Reservas por horario',
-        data: horarios.map(h => h.total),
+        data: horariosOrdenados.map(([, total]) => total),
         backgroundColor: '#16a34a',
+        borderRadius: 6,
+      },
+    ],
+  };
+
+  /* =========================
+     GRÁFICO 3:
+     Usuarios que más reservan
+     ========================= */
+  const usuariosMap = {};
+
+  reservas.forEach((r) => {
+    const user = r.userEmail || r.userId || 'Desconocido';
+    usuariosMap[user] = (usuariosMap[user] || 0) + 1;
+  });
+
+  const topUsuarios = Object.entries(usuariosMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const usuariosChartData = {
+    labels: topUsuarios.map(([usuario]) => usuario),
+    datasets: [
+      {
+        label: 'Reservas por usuario',
+        data: topUsuarios.map(([, total]) => total),
+        backgroundColor: '#9333ea',
         borderRadius: 6,
       },
     ],
@@ -68,26 +110,9 @@ const Dashboard = () => {
   const chartOptions = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'top',
-      },
+      legend: { position: 'top' },
     },
   };
-  /* =========================
-   GRÁFICO 3:
-   Usuarios que más reservan
-   ========================= */
-const usuariosChartData = {
-  labels: topUsuarios.map(u => u.usuario),
-  datasets: [
-    {
-      label: 'Reservas por usuario',
-      data: topUsuarios.map(u => u.total),
-      backgroundColor: '#9333ea', // morado
-      borderRadius: 6,
-    },
-  ],
-};
 
   return (
     <div className="space-y-6">
@@ -95,7 +120,7 @@ const usuariosChartData = {
       <div>
         <h1 className="text-2xl font-bold">Dashboard Administrativo</h1>
         <p className="text-gray-500">
-          Resumen general del uso de laboratorios
+          Uso de laboratorios en tiempo real
         </p>
       </div>
 
@@ -111,7 +136,7 @@ const usuariosChartData = {
         <div className="bg-white p-4 rounded-lg border">
           <p className="text-sm text-gray-500">Laboratorios ocupados</p>
           <p className="text-2xl font-semibold">
-            {stats?.laboratoriosOcupados ?? '0/0'}
+            {stats?.laboratoriosOcupados ?? 0}
           </p>
         </div>
 
@@ -129,9 +154,8 @@ const usuariosChartData = {
           <h2 className="text-lg font-semibold mb-4">
             Laboratorios más utilizados
           </h2>
-
-          {labsLabels.length === 0 ? (
-            <p className="text-gray-500">No hay reservas para mostrar</p>
+          {labsChartData.labels.length === 0 ? (
+            <p className="text-gray-500">Sin datos</p>
           ) : (
             <Bar data={labsChartData} options={chartOptions} />
           )}
@@ -141,8 +165,11 @@ const usuariosChartData = {
           <h2 className="text-lg font-semibold mb-4">
             Horarios más concurridos
           </h2>
-
-          <Bar data={horariosChartData} options={chartOptions} />
+          {horariosChartData.labels.length === 0 ? (
+            <p className="text-gray-500">Sin datos</p>
+          ) : (
+            <Bar data={horariosChartData} options={chartOptions} />
+          )}
         </div>
       </div>
 
@@ -150,12 +177,13 @@ const usuariosChartData = {
         <h2 className="text-lg font-semibold mb-4">
           Usuarios que más reservan
         </h2>
-
-        <Bar data={usuariosChartData} options={chartOptions} />
+        {usuariosChartData.labels.length === 0 ? (
+          <p className="text-gray-500">Sin datos</p>
+        ) : (
+          <Bar data={usuariosChartData} options={chartOptions} />
+        )}
       </div>
 
-
-      {/* FOOTER */}
       <p className="text-sm text-gray-500">
         Total de reservas analizadas: {reservas.length}
       </p>

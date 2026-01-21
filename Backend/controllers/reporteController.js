@@ -167,5 +167,5 @@ module.exports = {
   crearReporte,
   obtenerMisReportes,
   eliminarReporte,
-  obtenerUrlImagenReporte
+  obtenerUrlImagenReporte,
 };

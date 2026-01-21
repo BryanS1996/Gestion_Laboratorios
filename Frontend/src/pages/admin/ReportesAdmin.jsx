@@ -2,7 +2,7 @@ import { useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { mockReportes } from '../../mocks/reportesMock';
+import { useAdminReportes } from '../../hooks/useAdminReportes';
 import ReporteDetalleModal from '../../components/admin/ReporteDetalleModal';
 import logoUCE from '../../assets/logo_uce2.png';
 
@@ -25,24 +25,28 @@ const loadImageAsBase64 = (src) =>
 
 const ReportesAdmin = () => {
   /* =========================
-     STATE
+     BACKEND REAL
      ========================= */
-  const [reportes, setReportes] = useState(mockReportes);
+  const {
+    reportes,
+    loading,
+    error,
+    cambiarEstado,
+  } = useAdminReportes();
+
+  /* =========================
+     UI STATE
+     ========================= */
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroTexto, setFiltroTexto] = useState('');
   const [reporteSeleccionado, setReporteSeleccionado] = useState(null);
 
-  /* =========================
-     LOGICA
-     ========================= */
-  const cambiarEstado = (id, nuevoEstado) => {
-    setReportes((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, estado: nuevoEstado } : r
-      )
-    );
-  };
+  if (loading) return <p>Cargando reportes...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
+  /* =========================
+     FILTROS
+     ========================= */
   const reportesFiltrados = reportes.filter((r) => {
     const cumpleEstado =
       filtroEstado === 'todos' || r.estado === filtroEstado;
@@ -66,7 +70,7 @@ const ReportesAdmin = () => {
     try {
       const logoBase64 = await loadImageAsBase64(logoUCE);
       doc.addImage(logoBase64, 'PNG', 14, 10, 30, 30);
-    } catch (e) {
+    } catch {
       console.warn('Logo no cargado');
     }
 
@@ -108,7 +112,6 @@ const ReportesAdmin = () => {
      ========================= */
   return (
     <div className="space-y-6">
-      {/* HEADER */}
       <div>
         <h1 className="text-2xl font-bold">Reportes de Incidencias</h1>
         <p className="text-gray-500">
@@ -160,7 +163,7 @@ const ReportesAdmin = () => {
           <tbody>
             {reportesFiltrados.map((r) => (
               <tr
-                key={r.id}
+                key={r._id}
                 className="border-t hover:bg-gray-50 cursor-pointer"
                 onClick={() => setReporteSeleccionado(r)}
               >
@@ -173,10 +176,10 @@ const ReportesAdmin = () => {
                 <td className="p-3">
                   <select
                     value={r.estado}
-                    onChange={(e) =>
-                      cambiarEstado(r.id, e.target.value)
-                    }
                     onClick={(e) => e.stopPropagation()}
+                    onChange={(e) =>
+                      cambiarEstado(r._id, e.target.value)
+                    }
                     className="border rounded px-2 py-1 text-xs"
                   >
                     <option value="pendiente">Pendiente</option>
@@ -191,10 +194,12 @@ const ReportesAdmin = () => {
       </div>
 
       {/* MODAL */}
-      <ReporteDetalleModal
-        reporte={reporteSeleccionado}
-        onClose={() => setReporteSeleccionado(null)}
-      />
+      {reporteSeleccionado && (
+        <ReporteDetalleModal
+          reporte={reporteSeleccionado}
+          onClose={() => setReporteSeleccionado(null)}
+        />
+      )}
     </div>
   );
 };

@@ -1,40 +1,46 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockStats, mockReservas, mockHorarios, mockTopUsuarios } from '../mocks/dashboardMock';
+import { useAuth } from './useAuth';
 
 const API_URL = import.meta.env.VITE_API_URL;
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const useDashboard = () => {
-  const statsQuery = useQuery({
-    queryKey: ['dashboard-stats'],
+  const { jwtToken } = useAuth();
+
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['dashboard'],
+    enabled: !!jwtToken,
+
     queryFn: async () => {
-      if (USE_MOCK) return mockStats;
+      const res = await fetch(`${API_URL}/dashboard/stats`, {
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+        },
+      });
 
-      const res = await fetch(`${API_URL}/dashboard/stats`);
-      if (!res.ok) throw new Error('Error stats');
-      const data = await res.json();
-      return data.stats;
+      if (!res.ok) {
+        throw new Error('Error cargando dashboard');
+      }
+
+      return res.json();
     },
-  });
 
-  const reservasQuery = useQuery({
-    queryKey: ['dashboard-reservas'],
-    queryFn: async () => {
-      if (USE_MOCK) return mockReservas;
-
-      const res = await fetch(`${API_URL}/dashboard/reservas?limite=20`);
-      if (!res.ok) throw new Error('Error reservas');
-      const data = await res.json();
-      return data.reservas;
-    },
+    // ⏱️ OPTIMIZACIÓN FIRESTORE
+    refetchInterval: 10000,      
+    staleTime: 3000,
+    cacheTime: 60000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   return {
-    stats: statsQuery.data,
-    reservas: reservasQuery.data || [],
-    horarios: mockHorarios,
-    topUsuarios: mockTopUsuarios,
-    loading: statsQuery.isLoading || reservasQuery.isLoading,
-    error: statsQuery.error || reservasQuery.error,
+    stats: data?.stats ?? null,
+    reservas: data?.reservas ?? [],
+    loading: isLoading,
+    error: isError ? error : null,
   };
 };

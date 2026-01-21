@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import app from '../firebase'; // 👈 default import, NO { auth }
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 
 export const useAuth = () => {
   const isDevBypass = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
 
-  // 🔧 BYPASS SOLO EN DESARROLLO
   if (isDevBypass) {
     return {
       user: {
@@ -19,8 +18,6 @@ export const useAuth = () => {
       logout: () => {},
     };
   }
-
-  const auth = getAuth(app); // 👈 crear auth desde app
 
   const [user, setUser] = useState(null);
   const [jwtToken, setJwtToken] = useState(null);
@@ -41,14 +38,14 @@ export const useAuth = () => {
       setUser({
         uid: firebaseUser.uid,
         email: firebaseUser.email,
-        role: 'admin', // o lo que tengas en tu backend
+        role: 'admin',
       });
 
       setLoading(false);
     });
 
     return () => unsub();
-  }, [auth]);
+  }, []);
 
   const logout = async () => {
     await signOut(auth);

@@ -8,9 +8,10 @@ const {
   deleteReserva,
 } = require('../controllers/adminReservationsController');
 
-// ✅ Rutas de administración (solo admin)
+// 👇 SUBRUTAS ADMIN
+router.use('/reportes', require('./adminReportes.routes'));
 
-// Reservas: listar / editar / eliminar
+// Reservas
 router.get('/reservas', authMiddleware(['admin']), listReservas);
 router.patch('/reservas/:id', authMiddleware(['admin']), updateReserva);
 router.delete('/reservas/:id', authMiddleware(['admin']), deleteReserva);

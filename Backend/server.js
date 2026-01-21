@@ -21,6 +21,8 @@ const stripeRoutes = require('./routes/stripe.routes');   // Lógica del Checkou
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const { initReservasRealtime } = require('./realtime/reservasListener');
+initReservasRealtime();
 // --- MIDDLEWARES GLOBALES ---
 app.use(cors()); // CORS siempre primero para evitar bloqueos
 
@@ -53,9 +55,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/laboratorios', laboratoriosRoutes);
 app.use('/api/reservas', reservasRoutes);
 app.use('/api/reportes', reportesRoutes);
-app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', require('./routes/adminReportes.routes'));
 
 // ⚠️ 2. RUTA DE CHECKOUT (VA DESPUÉS DE JSON)
 // Esta ruta usa JSON ({ laboratorioId, fecha... }) así que DEBE ir después de express.json()

@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 // Your web app's Firebase configuration
@@ -12,12 +12,9 @@ const firebaseConfig = {
   measurementId: "G-GCLGXN3NFG"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0
+  ? initializeApp(firebaseConfig)
+  : getApp();
 
-// Initialize Firebase Authentication and get a reference to the service
-const auth = getAuth(app);
-
-console.log('Firebase auth initialized:', auth);
-
-export default auth;
+export const auth = getAuth(app);
+export default app;
