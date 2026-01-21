@@ -10,6 +10,25 @@ require('dotenv').config();
  */
 const authMiddleware = (allowedRoles = []) => {
   return (req, res, next) => {
+
+    // 🔧 DEV BYPASS (solo para desarrollo)
+    if (process.env.DEV_BYPASS_AUTH === 'true') {
+      req.user = {
+        uid: 'dev-admin',
+        email: 'admin@dev.local',
+        role: 'admin',
+        displayName: 'Admin Dev',
+      };
+
+      // Si hay restricción de roles, la respetamos
+      if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ error: 'Prohibido (DEV)' });
+      }
+
+      return next();
+    }
+
+    // 🔐 Flujo normal
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
@@ -21,7 +40,6 @@ const authMiddleware = (allowedRoles = []) => {
       const jwtSecret = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura';
       const decoded = jwt.verify(token, jwtSecret);
 
-      // Normalizamos campos esperados
       req.user = {
         uid: decoded.uid,
         email: decoded.email,
@@ -29,7 +47,6 @@ const authMiddleware = (allowedRoles = []) => {
         displayName: decoded.displayName,
       };
 
-      // Si no se especifican roles, basta con estar autenticado
       if (!allowedRoles || allowedRoles.length === 0) {
         return next();
       }

@@ -19,3 +19,10 @@ export const mockHorarios = [
   { hora: '14-16', total: 3 },
   { hora: '16-18', total: 2 },
 ];
+
+export const mockTopUsuarios = [
+  { usuario: 'Ana Pérez', total: 5 },
+  { usuario: 'Juan López', total: 3 },
+  { usuario: 'María Torres', total: 4 },
+  { usuario: 'Pedro Ruiz', total: 2 },
+];

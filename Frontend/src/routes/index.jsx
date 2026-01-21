@@ -8,12 +8,13 @@ import Configuracion from '../pages/admin/Configuracion';
 
 import Catalog from '../pages/Catalog';
 import StudentReservations from '../pages/StudentReservations';
+import ReportesAdmin from '../pages/admin/ReportesAdmin';
 import Reportes from '../pages/Reportes';
 import ProtectedRoute from './ProtectedRoute';
 
 // Layouts
 import AppLayout from '../components/AppLayout';
-import AdminLayout from '../components/admin/AdminLayout'; // 👈 asegúrate de tenerlo
+import AdminLayout from '../components/admin/AdminLayout';
 
 const AppRoutes = () => {
   return (
@@ -65,6 +66,7 @@ const AppRoutes = () => {
       >
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="usuarios" element={<Users />} />
+        <Route path="reportes" element={<ReportesAdmin />} />
         <Route path="configuracion" element={<Configuracion />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>

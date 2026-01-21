@@ -1,16 +1,16 @@
-// components/admin/AdminLayout.jsx
-import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
+import { Outlet } from "react-router-dom";
+import Sidebar from "./Sidebar";
 
-const AdminLayout = () => {
+export default function AppLayout() {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="min-h-screen flex bg-slate-50">
       <Sidebar />
-      <main style={{ flex: 1, padding: '24px' }}>
-        <Outlet />
+
+      <main className="flex-1 p-6">
+        <div className="max-w-6xl mx-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
-};
-
-export default AdminLayout;
+}

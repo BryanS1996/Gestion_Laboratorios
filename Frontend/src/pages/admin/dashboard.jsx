@@ -19,7 +19,7 @@ ChartJS.register(
 );
 
 const Dashboard = () => {
-  const { stats, reservas, horarios, loading, error } = useDashboard();
+  const { stats, reservas, horarios, topUsuarios, loading, error } = useDashboard();
 
   if (loading) return <p>Cargando dashboard...</p>;
   if (error) return <p>{String(error)}</p>;
@@ -73,6 +73,21 @@ const Dashboard = () => {
       },
     },
   };
+  /* =========================
+   GRÁFICO 3:
+   Usuarios que más reservan
+   ========================= */
+const usuariosChartData = {
+  labels: topUsuarios.map(u => u.usuario),
+  datasets: [
+    {
+      label: 'Reservas por usuario',
+      data: topUsuarios.map(u => u.total),
+      backgroundColor: '#9333ea', // morado
+      borderRadius: 6,
+    },
+  ],
+};
 
   return (
     <div className="space-y-6">
@@ -130,6 +145,15 @@ const Dashboard = () => {
           <Bar data={horariosChartData} options={chartOptions} />
         </div>
       </div>
+
+      <div className="bg-white p-6 rounded-lg border">
+        <h2 className="text-lg font-semibold mb-4">
+          Usuarios que más reservan
+        </h2>
+
+        <Bar data={usuariosChartData} options={chartOptions} />
+      </div>
+
 
       {/* FOOTER */}
       <p className="text-sm text-gray-500">

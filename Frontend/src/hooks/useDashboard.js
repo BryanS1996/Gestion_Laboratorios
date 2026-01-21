@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockStats, mockReservas, mockHorarios } from '../mocks/dashboardMock';
+import { mockStats, mockReservas, mockHorarios, mockTopUsuarios } from '../mocks/dashboardMock';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
@@ -33,6 +33,7 @@ export const useDashboard = () => {
     stats: statsQuery.data,
     reservas: reservasQuery.data || [],
     horarios: mockHorarios,
+    topUsuarios: mockTopUsuarios,
     loading: statsQuery.isLoading || reservasQuery.isLoading,
     error: statsQuery.error || reservasQuery.error,
   };
