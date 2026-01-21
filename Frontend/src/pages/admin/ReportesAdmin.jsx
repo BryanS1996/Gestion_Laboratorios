@@ -1,175 +1,200 @@
+import { useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
 import { mockReportes } from '../../mocks/reportesMock';
+import ReporteDetalleModal from '../../components/admin/ReporteDetalleModal';
 import logoUCE from '../../assets/logo_uce2.png';
 
-const loadImageAsBase64 = (src) => {
-  return new Promise((resolve, reject) => {
+/* =========================
+   Util: cargar imagen local
+   ========================= */
+const loadImageAsBase64 = (src) =>
+  new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      canvas.getContext('2d').drawImage(img, 0, 0);
       resolve(canvas.toDataURL('image/png'));
     };
     img.onerror = reject;
     img.src = src;
   });
-};
 
 const ReportesAdmin = () => {
-  const reportes = mockReportes;
+  /* =========================
+     STATE
+     ========================= */
+  const [reportes, setReportes] = useState(mockReportes);
+  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroTexto, setFiltroTexto] = useState('');
+  const [reporteSeleccionado, setReporteSeleccionado] = useState(null);
 
-  // ✅ DEBE SER async
-  // ✅ DEBE SER async
+  /* =========================
+     LOGICA
+     ========================= */
+  const cambiarEstado = (id, nuevoEstado) => {
+    setReportes((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, estado: nuevoEstado } : r
+      )
+    );
+  };
+
+  const reportesFiltrados = reportes.filter((r) => {
+    const cumpleEstado =
+      filtroEstado === 'todos' || r.estado === filtroEstado;
+
+    const texto = filtroTexto.toLowerCase();
+    const cumpleTexto =
+      r.titulo.toLowerCase().includes(texto) ||
+      r.userEmail.toLowerCase().includes(texto);
+
+    return cumpleEstado && cumpleTexto;
+  });
+
+  /* =========================
+     PDF
+     ========================= */
   const exportarPDF = async () => {
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4',
-    });
-
-    // 👇 AQUÍ ESTABA EL ERROR: Faltaba definir esta variable
+    const doc = new jsPDF({ orientation: 'landscape' });
     const pageWidth = doc.internal.pageSize.getWidth();
-
-    // 📅 Fecha
     const fechaHoy = new Date().toLocaleDateString('es-EC');
 
-    // 🖼️ Logo
     try {
       const logoBase64 = await loadImageAsBase64(logoUCE);
       doc.addImage(logoBase64, 'PNG', 14, 10, 30, 30);
-    } catch (error) {
-      console.error("No se pudo cargar el logo", error);
+    } catch (e) {
+      console.warn('Logo no cargado');
     }
 
-    // 🏫 TÍTULOS CENTRADOS
     doc.setFontSize(16);
-    // Ahora sí funciona porque 'pageWidth' ya existe
-    doc.text('Universidad Central del Ecuador', pageWidth / 2, 18, { align: 'center' }); 
-    
+    doc.text('Universidad Central del Ecuador', pageWidth / 2, 18, { align: 'center' });
     doc.setFontSize(13);
     doc.text('Sistema de Gestión de Laboratorios', pageWidth / 2, 26, { align: 'center' });
 
     doc.setFontSize(11);
     doc.text('Reporte semanal de incidencias', 14, 50);
-    doc.text(`Fecha de generación: ${fechaHoy}`, 14, 58);
+    doc.text(`Fecha: ${fechaHoy}`, 14, 58);
 
-    // 📊 TABLA
     autoTable(doc, {
       startY: 65,
-      head: [['Fecha', 'Laboratorio', 'Usuario', 'Tipo', 'Estado']],
-      body: reportes.map(r => [
+      head: [['Fecha', 'Laboratorio', 'Usuario', 'Título', 'Estado']],
+      body: reportesFiltrados.map((r) => [
         new Date(r.fechaCreacion).toLocaleDateString('es-EC'),
         r.laboratorioNombre,
         r.userEmail,
         r.titulo,
         r.estado,
       ]),
-      styles: {
-        fontSize: 9,
-        cellPadding: 3,
-      },
-      headStyles: {
-        fillColor: [37, 99, 235],
-        textColor: 255,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
-      // Nota: Verifica que la suma de estos anchos no supere el ancho A4 Landscape (aprox 297mm)
-      // Tus anchos suman 275mm + margenes, queda muy justo, pero debería entrar.
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255 },
       columnStyles: {
         0: { cellWidth: 30 },
-        1: { cellWidth: 55 },
+        1: { cellWidth: 60 },
         2: { cellWidth: 70 },
         3: { cellWidth: 90 },
         4: { cellWidth: 30 },
       },
-      // Esto ayuda a centrar la tabla en la página automáticamente
-      margin: { top: 65, left: 14, right: 14 } 
     });
-
-    // ✍️ PIE
-    // Verificamos que lastAutoTable exista para evitar errores si la tabla falla
-    const finalY = (doc.lastAutoTable?.finalY || 65) + 20; 
-    
-    doc.text('_____________________________', 14, finalY);
-    doc.text('Firma Responsable', 14, finalY + 6);
 
     doc.save('reporte_semanal_laboratorios.pdf');
   };
 
-
+  /* =========================
+     RENDER
+     ========================= */
   return (
     <div className="space-y-6">
+      {/* HEADER */}
       <div>
         <h1 className="text-2xl font-bold">Reportes de Incidencias</h1>
         <p className="text-gray-500">
-          Listado general de reportes generados por los usuarios
+          Gestión administrativa de reportes
         </p>
       </div>
 
-      <div className="flex justify-end">
+      {/* FILTROS */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <select
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+          className="border rounded px-3 py-2 text-sm"
+        >
+          <option value="todos">Todos</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="revisado">Revisado</option>
+          <option value="resuelto">Resuelto</option>
+        </select>
+
+        <input
+          type="text"
+          placeholder="Buscar por título o usuario"
+          value={filtroTexto}
+          onChange={(e) => setFiltroTexto(e.target.value)}
+          className="border rounded px-3 py-2 text-sm w-64"
+        />
+
         <button
           onClick={exportarPDF}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="ml-auto bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           Exportar PDF semanal
         </button>
       </div>
 
-      <div className="bg-white rounded-lg border overflow-hidden">
+      {/* TABLA */}
+      <div className="bg-white border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
               <th className="p-3 text-left">Fecha</th>
               <th className="p-3 text-left">Laboratorio</th>
               <th className="p-3 text-left">Usuario</th>
-              <th className="p-3 text-left">Tipo</th>
+              <th className="p-3 text-left">Título</th>
               <th className="p-3 text-left">Estado</th>
             </tr>
           </thead>
-            <tbody>
-              {reportes.map((r) => (
-                <tr key={r.id} className="border-t">
-                  <td className="p-3">
-                    {new Date(r.fechaCreacion).toLocaleDateString('es-EC')}
-                  </td>
-
-                  <td className="p-3">
-                    {r.laboratorioNombre}
-                  </td>
-
-                  <td className="p-3">
-                    {r.userEmail}
-                  </td>
-
-                  <td className="p-3">
-                    {r.titulo}
-                  </td>
-
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        r.estado === 'pendiente'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : r.estado === 'revisado'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}
-                    >
-                      {r.estado}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+          <tbody>
+            {reportesFiltrados.map((r) => (
+              <tr
+                key={r.id}
+                className="border-t hover:bg-gray-50 cursor-pointer"
+                onClick={() => setReporteSeleccionado(r)}
+              >
+                <td className="p-3">
+                  {new Date(r.fechaCreacion).toLocaleDateString('es-EC')}
+                </td>
+                <td className="p-3">{r.laboratorioNombre}</td>
+                <td className="p-3">{r.userEmail}</td>
+                <td className="p-3">{r.titulo}</td>
+                <td className="p-3">
+                  <select
+                    value={r.estado}
+                    onChange={(e) =>
+                      cambiarEstado(r.id, e.target.value)
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                    className="border rounded px-2 py-1 text-xs"
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="revisado">Revisado</option>
+                    <option value="resuelto">Resuelto</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
+
+      {/* MODAL */}
+      <ReporteDetalleModal
+        reporte={reporteSeleccionado}
+        onClose={() => setReporteSeleccionado(null)}
+      />
     </div>
   );
 };

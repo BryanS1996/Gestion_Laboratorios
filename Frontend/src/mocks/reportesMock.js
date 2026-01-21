@@ -1,3 +1,11 @@
+const cambiarEstado = (id, nuevoEstado) => {
+  setReportes((prev) =>
+    prev.map((r) =>
+      r.id === id ? { ...r, estado: nuevoEstado } : r
+    )
+  );
+};
+
 export const mockReportes = [
   {
     id: 'rep-001',
