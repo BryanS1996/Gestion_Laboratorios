@@ -5,8 +5,18 @@ import { useAuth } from '../hooks/useAuth.js';
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, loading, isAuthenticated } = useAuth();
 
+  // 🔧 BYPASS SOLO EN DESARROLLO
+  const isDevBypass = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
+  if (isDevBypass) {
+    return children;
+  }
+
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Cargando...
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
