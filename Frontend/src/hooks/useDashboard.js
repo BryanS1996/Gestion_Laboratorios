@@ -1,45 +1,38 @@
-// hooks/useDashboard.js
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from './useAuth';
+import { mockStats, mockReservas, mockHorarios } from '../mocks/dashboardMock';
 
 const API_URL = import.meta.env.VITE_API_URL;
-
-const fetchStats = async (token) => {
-  const res = await fetch(`${API_URL}/dashboard/stats`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Error fetching dashboard stats');
-  return res.json();
-};
-
-const fetchReservas = async (token) => {
-  const res = await fetch(`${API_URL}/dashboard/reservas?limite=20`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error('Error fetching dashboard reservations');
-  return res.json();
-};
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const useDashboard = () => {
-  const { jwtToken } = useAuth();
-
   const statsQuery = useQuery({
-    queryKey: ['dashboard', 'stats'],
-    queryFn: () => fetchStats(jwtToken),
-    enabled: !!jwtToken,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      if (USE_MOCK) return mockStats;
+
+      const res = await fetch(`${API_URL}/dashboard/stats`);
+      if (!res.ok) throw new Error('Error stats');
+      const data = await res.json();
+      return data.stats;
+    },
   });
 
   const reservasQuery = useQuery({
-    queryKey: ['dashboard', 'reservas'],
-    queryFn: () => fetchReservas(jwtToken),
-    enabled: !!jwtToken,
-    staleTime: 1000 * 60 * 2, // 2 minutos
+    queryKey: ['dashboard-reservas'],
+    queryFn: async () => {
+      if (USE_MOCK) return mockReservas;
+
+      const res = await fetch(`${API_URL}/dashboard/reservas?limite=20`);
+      if (!res.ok) throw new Error('Error reservas');
+      const data = await res.json();
+      return data.reservas;
+    },
   });
 
   return {
-    stats: statsQuery.data?.stats ?? null,
-    reservas: reservasQuery.data?.reservas ?? [],
+    stats: statsQuery.data,
+    reservas: reservasQuery.data || [],
+    horarios: mockHorarios,
     loading: statsQuery.isLoading || reservasQuery.isLoading,
     error: statsQuery.error || reservasQuery.error,
   };
