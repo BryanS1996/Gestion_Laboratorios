@@ -7,7 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const {
   getAvailability,
   getMyReservas,
-  getAllReservations, // ✅ Asegúrate que esto esté en el controller
+  getAllReservations, 
   createReserva,
   cancelReserva,
 } = require('../controllers/reservasController');

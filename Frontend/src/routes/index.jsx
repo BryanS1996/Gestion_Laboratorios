@@ -10,6 +10,7 @@ import Users from '../pages/admin/Users';
 import Configuracion from '../pages/admin/Configuracion';
 import ReportesAdmin from '../pages/admin/ReportesAdmin';
 import EditUser from '../pages/admin/EditUser';
+import AdminLaboratorios from '../pages/admin/AdminLaboratorios';
 
 // Student pages
 import Catalog from '../pages/Catalog';
@@ -75,6 +76,7 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="usuarios" element={<Users />} />
         <Route path="usuarios/:uid" element={<EditUser />} />
+        <Route path="laboratorios" element={<AdminLaboratorios />} />
         <Route path="reportes" element={<ReportesAdmin />} />
         <Route path="configuracion" element={<Configuracion />} />
       </Route>

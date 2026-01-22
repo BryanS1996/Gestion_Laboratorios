@@ -14,7 +14,6 @@ router.get(
   getReportesAdmin
 );
 
-// ✅ PATCH /api/admin/reportes/:id/estado
 router.patch(
   '/reportes/:id/estado',
   authMiddleware(['admin']),

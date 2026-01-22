@@ -23,8 +23,17 @@ const SidebarAdmin = () => {
           <BarChart3 size={18} /> Dashboard
         </NavLink>
 
-        <NavLink to="/admin/laboratorios" className="admin-link">
-          <Building2 size={18} /> Laboratorios
+        <NavLink
+          to="/admin/laboratorios"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-2 rounded-lg transition
+            ${isActive
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-600 hover:bg-gray-100'}`
+          }
+        >
+          <FileText size={18} />
+          <span>Laboratorios</span>
         </NavLink>
 
         <NavLink to="/admin/usuarios" className="admin-link">
