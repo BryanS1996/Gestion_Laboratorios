@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useAuth } from '../../hooks/useAuth';
-import Spinner from '../../components/Spinner';
+import Spinner from '../../components/admin/Spinner';
+
 
 import {
   Chart as ChartJS,

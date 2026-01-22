@@ -2,108 +2,124 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-// 1. IMPORTAR CONEXIÓN A MONGO
-const connectMongo = require('./config/mongo');
-
-// --- IMPORTS DE RUTAS ---
-const userRoutes = require('./routes/userRoutes');
-const laboratoriosRoutes = require('./routes/laboratorios.routes');
-const reservasRoutes = require('./routes/reservas.routes');
-const reportesRoutes = require('./routes/reportes.routes');
-const adminRoutes = require('./routes/admin.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
-const authRoutes = require('./routes/auth.routes');
-
-// IMPORTS DE STRIPE
-const stripeWebhook = require('./routes/stripe.webhook'); // Lógica del Webhook
-const stripeRoutes = require('./routes/stripe.routes');   // Lógica del Checkout (Pago)
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ======================================================
+// 🗄️ CONEXIONES Y SERVICIOS
+// ======================================================
+const connectMongo = require('./config/mongo');
 const { initReservasRealtime } = require('./realtime/reservasListener');
+
+// Conectar MongoDB
+connectMongo();
+
+// Inicializar listeners en tiempo real
 initReservasRealtime();
-// --- MIDDLEWARES GLOBALES ---
-app.use(cors()); // CORS siempre primero para evitar bloqueos
 
-// ⚠️ 1. RUTA DEL WEBHOOK (VA PRIMERO)
-// IMPORTANTE: Esta ruta debe ir ANTES de express.json() porque Stripe necesita recibir
-// los datos "crudos" (raw) para verificar la firma de seguridad.
-app.use('/api/stripe', stripeWebhook); 
+// ======================================================
+// 🧩 MIDDLEWARES GLOBALES
+// ======================================================
+app.use(cors());
 
-// --- PARSEADORES DE BODY ---
-// A partir de aquí, Express convertirá todo a JSON
+// ⚠️ STRIPE WEBHOOK (DEBE IR ANTES DEL JSON PARSER)
+app.use('/api/stripe', require('./routes/stripe.webhook'));
+
+// Body parsers (después del webhook)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 2. CONECTAR A MONGODB (Se ejecuta al iniciar)
-connectMongo();
-
-// Logging middleware
+// Logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
-// Health check endpoint
+// ======================================================
+// ❤️ HEALTH CHECK
+// ======================================================
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// --- API ROUTES ---
-app.use('/api/users', userRoutes);
-app.use('/api/laboratorios', laboratoriosRoutes);
-app.use('/api/reservas', reservasRoutes);
-app.use('/api/reportes', reportesRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', require('./routes/adminReportes.routes'));
+// ======================================================
+// 🚏 RUTAS DE LA API
+// ======================================================
 
-// ⚠️ 2. RUTA DE CHECKOUT (VA DESPUÉS DE JSON)
-// Esta ruta usa JSON ({ laboratorioId, fecha... }) así que DEBE ir después de express.json()
-// y ANTES del manejador 404.
-app.use('/api/stripe', stripeRoutes); 
+// Auth
+app.use('/api/auth', require('./routes/auth.routes'));
 
-// Root endpoint
+// Usuarios
+app.use('/api/users', require('./routes/userRoutes'));
+
+// Laboratorios
+app.use('/api/laboratorios', require('./routes/laboratorios.routes'));
+
+// Reservas
+app.use('/api/reservas', require('./routes/reservas.routes'));
+
+// Reportes (usuarios)
+app.use('/api/reportes', require('./routes/reportes.routes'));
+
+// Dashboard
+app.use('/api/dashboard', require('./routes/dashboard.routes'));
+
+// 🔴 ADMIN (TODAS LAS RUTAS ADMIN AQUÍ)
+app.use('/api/admin', require('./routes/admin.routes'));
+
+// Stripe checkout (DESPUÉS del JSON parser)
+app.use('/api/stripe', require('./routes/stripe.routes'));
+
+// ======================================================
+// 📌 ROOT API INFO
+// ======================================================
 app.get('/api', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Laboratorios API',
     version: '1.0.0',
     endpoints: {
+      auth: '/api/auth',
       users: '/api/users',
       laboratorios: '/api/laboratorios',
       reservas: '/api/reservas',
       reportes: '/api/reportes',
+      dashboard: '/api/dashboard',
       admin: '/api/admin',
-      stripe: '/api/stripe'
-    }
+      stripe: '/api/stripe',
+    },
   });
 });
 
-// --- MANEJO DE ERRORES ---
+// ======================================================
+// ❌ MANEJO DE ERRORES
+// ======================================================
 
-// 404 handler (Ruta no encontrada)
-// Este middleware debe ser el penúltimo. Si la petición llega aquí, es que ninguna ruta anterior respondió.
+// 404
 app.use((req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     error: 'Endpoint not found',
-    path: req.path,
-    method: req.method 
+    method: req.method,
+    path: req.originalUrl,
   });
 });
 
-// Error handling middleware (Errores de servidor)
+// Error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
+  console.error('❌ Error:', err);
   res.status(err.status || 500).json({
     error: err.message || 'Internal Server Error',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Start server
+// ======================================================
+// 🚀 START SERVER
+// ======================================================
 app.listen(PORT, () => {
-  console.log(`\n✅ Servidor backend ejecutándose en http://localhost:${PORT}`);
+  console.log(`\n✅ Backend corriendo en http://localhost:${PORT}`);
   console.log(`📚 API disponible en http://localhost:${PORT}/api\n`);
 });
 

@@ -1,114 +1,124 @@
 import { useState } from 'react';
 import { useAdminUsers } from '../../hooks/useAdminUsers';
-import {
-  ArrowLeft,
-  RefreshCw,
-  LogOut
-} from 'lucide-react';
+import { ArrowLeft, RefreshCw, LogOut, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 const Users = () => {
   const navigate = useNavigate();
-  const { logout, jwtToken } = useAuth();
+  const { logout } = useAuth();
 
   const {
     data: usuarios = [],
-    isLoading: loading,
+    isLoading,
     error,
     refetch,
   } = useAdminUsers();
 
-  const [roleEdits, setRoleEdits] = useState({});
-  const [busy, setBusy] = useState({});
-
-  const API_URL = import.meta.env.VITE_API_URL;
-
-  const setRoleFor = (uid, role) => {
-    setRoleEdits((prev) => ({ ...prev, [uid]: role }));
-  };
-
-  const saveRole = async (uid) => {
-    const newRole = roleEdits[uid];
-    if (!newRole) return;
-
-    try {
-      setBusy((p) => ({ ...p, [uid]: true }));
-
-      const res = await fetch(`${API_URL}/users/change-role/${uid}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwtToken}`,
-        },
-        body: JSON.stringify({ newRole }),
-      });
-
-      if (!res.ok) throw new Error('Error cambiando rol');
-      await refetch();
-    } finally {
-      setBusy((p) => ({ ...p, [uid]: false }));
-    }
-  };
-
-  if (loading) return <p>Cargando usuarios…</p>;
-  if (error) return <p className="text-red-600">{String(error.message || error)}</p>;
+  if (isLoading) return <p className="p-6">Cargando usuarios…</p>;
+  if (error) return <p className="p-6 text-red-600">Error cargando usuarios</p>;
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
 
-        <button
-          onClick={() => navigate('/admin/dashboard')}
-          className="flex items-center gap-2 text-blue-600 mb-6"
-        >
-          <ArrowLeft size={20} />
-          Volver al Dashboard
-        </button>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="flex items-center gap-2 text-blue-600"
+            >
+              <ArrowLeft size={20} />
+              Volver
+            </button>
+            <h1 className="text-3xl font-bold">Usuarios</h1>
+          </div>
 
-        <div className="flex justify-between mb-6">
-          <h1 className="text-3xl font-bold">Usuarios</h1>
-          <button onClick={logout} className="flex items-center gap-2 text-red-600">
-            <LogOut size={20} /> Cerrar sesión
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={refetch}
+              className="flex items-center gap-2 text-gray-600"
+            >
+              <RefreshCw size={18} />
+              Refrescar
+            </button>
+
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 text-red-600"
+            >
+              <LogOut size={18} />
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
-        <button onClick={refetch} className="mb-4">
-          <RefreshCw size={18} />
-        </button>
+        {/* Tabla */}
+        <div className="bg-white border rounded-lg overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100 text-left">
+              <tr>
+                <th className="p-3">Correo</th>
+                <th className="p-3">UID</th>
+                <th className="p-3">Última conexión</th>
+                <th className="p-3 text-center">Reservas</th>
+                <th className="p-3 text-center">Reportes</th>
+                <th className="p-3 text-center">Acciones</th>
+              </tr>
+            </thead>
 
-        <div className="bg-white border rounded">
-          {usuarios.length === 0 ? (
-            <p className="p-6 text-gray-500">No hay usuarios</p>
-          ) : (
-            usuarios.map((u) => (
-              <div key={u.uid} className="flex justify-between p-4 border-b">
-                <div>
-                  <p className="font-medium">{u.email}</p>
-                  <p className="text-sm text-gray-500">{u.role}</p>
-                </div>
+            <tbody>
+              {usuarios.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-6 text-center text-gray-500">
+                    No hay usuarios registrados
+                  </td>
+                </tr>
+              ) : (
+                usuarios.map((u) => (
+                  <tr key={u.uid} className="border-t hover:bg-slate-50">
+                    <td className="p-3">
+                      <div className="font-medium">{u.email}</div>
+                      <div className="text-xs text-gray-500 capitalize">
+                        {u.role}
+                      </div>
+                    </td>
 
-                <select
-                  value={roleEdits[u.uid] || u.role}
-                  onChange={(e) => setRoleFor(u.uid, e.target.value)}
-                  disabled={busy[u.uid]}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="professor">Profesor</option>
-                  <option value="student">Estudiante</option>
-                </select>
+                    <td className="p-3 text-xs text-gray-500">
+                      {u.uid}
+                    </td>
 
-                <button
-                  onClick={() => saveRole(u.uid)}
-                  disabled={busy[u.uid]}
-                  className="text-blue-600"
-                >
-                  Guardar
-                </button>
-              </div>
-            ))
-          )}
+                    <td className="p-3 text-xs text-gray-500">
+                      {u.lastLoginAt
+                        ? new Date(u.lastLoginAt).toLocaleString()
+                        : 'Nunca'}
+                    </td>
+
+                    <td className="p-3 text-center">
+                      {u.reservasCount ?? 0}
+                    </td>
+
+                    <td className="p-3 text-center">
+                      {u.reportesCount ?? 0}
+                    </td>
+
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => navigate(`/admin/usuarios/${u.uid}`)}
+                        className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                      >
+                        <Edit size={16} />
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+
       </div>
     </div>
   );

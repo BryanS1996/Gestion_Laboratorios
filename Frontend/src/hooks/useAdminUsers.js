@@ -8,10 +8,8 @@ export const useAdminUsers = () => {
 
   return useQuery({
     queryKey: ['admin-users'],
-    enabled: !!jwtToken,
-
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/dashboard/usuarios`, {
+      const res = await fetch(`${API_URL}/admin/users`, {
         headers: {
           Authorization: `Bearer ${jwtToken}`,
         },

@@ -1,32 +1,39 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+
+// Auth
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 
+// Admin pages
 import AdminDashboard from '../pages/admin/dashboard';
 import Users from '../pages/admin/Users';
 import Configuracion from '../pages/admin/Configuracion';
+import ReportesAdmin from '../pages/admin/ReportesAdmin';
+import EditUser from '../pages/admin/EditUser';
 
+// Student pages
 import Catalog from '../pages/Catalog';
 import StudentReservations from '../pages/StudentReservations';
-import ReportesAdmin from '../pages/admin/ReportesAdmin';
 import Reportes from '../pages/Reportes';
-import ProtectedRoute from './ProtectedRoute';
 
 // Layouts
 import AppLayout from '../components/AppLayout';
 import AdminLayout from '../components/admin/AdminLayout';
 
+// Guard
+import ProtectedRoute from './ProtectedRoute';
+
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Ruta raíz */}
+      {/* Root */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* Públicas */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* 🟦 RUTAS USUARIO / ESTUDIANTE */}
+      {/* 🟦 USUARIO / ESTUDIANTE */}
       <Route
         element={
           <ProtectedRoute>
@@ -55,7 +62,7 @@ const AppRoutes = () => {
         />
       </Route>
 
-      {/* 🟥 RUTAS ADMIN (SIN AppLayout) */}
+      {/* 🟥 ADMIN */}
       <Route
         path="/admin"
         element={
@@ -64,11 +71,12 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
+        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="usuarios" element={<Users />} />
+        <Route path="usuarios/:uid" element={<EditUser />} />
         <Route path="reportes" element={<ReportesAdmin />} />
         <Route path="configuracion" element={<Configuracion />} />
-        <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
 
       {/* Fallback */}
