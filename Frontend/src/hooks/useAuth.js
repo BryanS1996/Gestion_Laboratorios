@@ -63,7 +63,7 @@ export const useAuth = () => {
   /* ============================
      🔐 Auth helpers
      ============================ */
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!user && !loading;
   const isAdmin = user?.role === 'admin';
   const isStudent = user?.role === 'student';
 

@@ -4,7 +4,6 @@ import { useDashboard } from '../../hooks/useDashboard';
 import { useAuth } from '../../hooks/useAuth';
 import Spinner from '../../components/admin/Spinner';
 import DoughnutChart from '../../components/admin/charts/DoughnutChart';
-import SkeletonChart from '../../components/admin/charts/SkeletonChart';
 
 import {
   Chart as ChartJS,
@@ -25,7 +24,7 @@ ChartJS.register(
 );
 
 const Dashboard = () => {
-  // 🔐 AUTH
+  /* ================= AUTH ================= */
   const { user, loading: authLoading } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -41,37 +40,23 @@ const Dashboard = () => {
 
   const stats = data?.stats ?? {};
   const reservas = data?.reservas ?? [];
-  
+
+  /* ================= GUARDS ================= */
+  if (authLoading || loading) return <Spinner />;
+  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (error) return <p className="text-red-600">{String(error)}</p>;
+
+  /* ================= ESTADO RESERVAS ================= */
   const estadoReservas = reservas.reduce(
-  (acc, r) => {
-    const estado = r.estado || 'pendiente';
-    acc[estado] = (acc[estado] || 0) + 1;
-    return acc;
-  },
-  {
-    pendiente: 0,
-    aprobada: 0,
-    cancelada: 0,
-  }
-);
+    (acc, r) => {
+      const estado = r.estado || 'pendiente';
+      acc[estado] = (acc[estado] || 0) + 1;
+      return acc;
+    },
+    { pendiente: 0, aprobada: 0, cancelada: 0 }
+  );
 
-  // ⏳ LOADING GLOBAL
-  if (authLoading || loading) {
-    return <Spinner />;
-  }
-
-  // ⛔ NO ADMIN
-  if (!isAdmin) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (error) {
-    return <p className="text-red-600">{String(error)}</p>;
-  }
-
-  /* =========================
-     GRÁFICO 1: LABS
-     ========================= */
+  /* ================= LABORATORIOS ================= */
   const reservasPorLab = reservas.reduce((acc, r) => {
     const lab = r.laboratorioId || 'Desconocido';
     acc[lab] = (acc[lab] || 0) + 1;
@@ -90,37 +75,42 @@ const Dashboard = () => {
     ],
   };
 
-  /* =========================
-     GRÁFICO 2: HORARIOS
-     ========================= */
-  const horariosMap = {};
+  /* ================= HORARIOS (BLOQUES FIJOS) ================= */
+  const bloques = [
+    { label: '07:00 - 09:00', start: 7, end: 9 },
+    { label: '09:00 - 11:00', start: 9, end: 11 },
+    { label: '11:00 - 13:00', start: 11, end: 13 },
+    { label: '14:00 - 16:00', start: 14, end: 16 },
+    { label: '16:00 - 18:00', start: 16, end: 18 },
+  ];
+
+  const bloquesMap = {};
+  bloques.forEach(b => (bloquesMap[b.label] = 0));
 
   reservas.forEach((r) => {
-    if (!r.horaInicio || !r.horaFin) return;
-    for (let h = r.horaInicio; h < r.horaFin; h++) {
-      horariosMap[h] = (horariosMap[h] || 0) + 1;
-    }
+    bloques.forEach((b) => {
+      if (
+        r.horaInicio < b.end &&
+        r.horaFin > b.start
+      ) {
+        bloquesMap[b.label]++;
+      }
+    });
   });
 
-  const horariosOrdenados = Object.entries(horariosMap).sort(
-    (a, b) => Number(a[0]) - Number(b[0])
-  );
-
   const horariosChartData = {
-    labels: horariosOrdenados.map(([h]) => `${h}:00`),
+    labels: Object.keys(bloquesMap),
     datasets: [
       {
-        label: 'Reservas por horario',
-        data: horariosOrdenados.map(([, t]) => t),
+        label: 'Reservas por bloque horario',
+        data: Object.values(bloquesMap),
         backgroundColor: '#16a34a',
         borderRadius: 6,
       },
     ],
   };
 
-  /* =========================
-     GRÁFICO 3: USUARIOS
-     ========================= */
+  /* ================= USUARIOS ================= */
   const usuariosMap = {};
   reservas.forEach((r) => {
     const u = r.userEmail || r.userId || 'Desconocido';
@@ -143,22 +133,20 @@ const Dashboard = () => {
     ],
   };
 
+  /* ================= OPTIONS ================= */
   const chartOptions = {
     responsive: true,
-    animation: {
-      duration: 600,
-      easing: 'easeOutQuart',
-    },
+    maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top',
+        position: 'bottom',
       },
     },
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col gap-4 overflow-hidden animate-fade-in">
-      
+    <div className="flex flex-col gap-6 animate-fade-in">
+
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
@@ -177,47 +165,36 @@ const Dashboard = () => {
       </div>
 
       {/* CARDS */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card title="Reservas del día" value={stats?.reservasHoy} />
         <Card title="Laboratorios ocupados" value={stats?.laboratoriosOcupados} />
         <Card title="Reportes pendientes" value={stats?.reportesPendientes ?? 0} />
       </div>
 
       {/* GRÁFICOS */}
-      <div className="grid grid-cols-2 grid-rows-2 gap-4 flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {loading ? (
-          <>
-            <SkeletonChart />
-            <SkeletonChart />
-            <SkeletonChart />
-            <SkeletonChart />
-          </>
-        ) : (
-          <>
-            <ChartBox title="Laboratorios más utilizados">
-              {labsChartData.labels.length === 0
-                ? <Empty />
-                : <Bar data={labsChartData} options={chartOptions} />}
-            </ChartBox>
+        <ChartBox title="Laboratorios más utilizados">
+          {labsChartData.labels.length === 0
+            ? <Empty />
+            : <Bar data={labsChartData} options={chartOptions} />}
+        </ChartBox>
 
-            <ChartBox title="Estado de reservas">
-              <DoughnutChart dataStats={estadoReservas} />
-            </ChartBox>
+        <ChartBox title="Estado de reservas">
+          <DoughnutChart dataStats={estadoReservas} />
+        </ChartBox>
 
-            <ChartBox title="Horarios más concurridos">
-              {horariosChartData.labels.length === 0
-                ? <Empty />
-                : <Bar data={horariosChartData} options={chartOptions} />}
-            </ChartBox>
+        <ChartBox title="Horarios más concurridos">
+          {horariosChartData.labels.length === 0
+            ? <Empty />
+            : <Bar data={horariosChartData} options={chartOptions} />}
+        </ChartBox>
 
-            <ChartBox title="Usuarios que más reservan">
-              {usuariosChartData.labels.length === 0
-                ? <Empty />
-                : <Bar data={usuariosChartData} options={chartOptions} />}
-            </ChartBox>
-          </>
-        )}
+        <ChartBox title="Usuarios que más reservan">
+          {usuariosChartData.labels.length === 0
+            ? <Empty />
+            : <Bar data={usuariosChartData} options={chartOptions} />}
+        </ChartBox>
 
       </div>
     </div>
@@ -227,26 +204,22 @@ const Dashboard = () => {
 /* ================= COMPONENTES ================= */
 
 const Card = ({ title, value }) => (
-  <div className="
-    bg-white p-4 rounded-lg border
-    transition-all duration-200
-    hover:shadow-md hover:-translate-y-0.5
-  ">
+  <div className="bg-white p-4 rounded-xl border hover:shadow-md transition">
     <p className="text-sm text-gray-500">{title}</p>
     <p className="text-2xl font-semibold">{value ?? 0}</p>
   </div>
 );
 
 const ChartBox = ({ title, children }) => (
-  <div className="bg-white p-6 rounded-lg border flex flex-col">
-    <h2 className="text-lg font-semibold mb-4">{title}</h2>
+  <div className="bg-white p-4 rounded-xl border flex flex-col h-[320px]">
+    <h2 className="text-sm font-semibold mb-3">{title}</h2>
     <div className="flex-1">{children}</div>
   </div>
 );
 
 const Empty = () => (
-  <div className="flex items-center justify-center h-full">
-    <p className="text-gray-400 text-sm">Sin datos para mostrar</p>
+  <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+    Sin datos para mostrar
   </div>
 );
 

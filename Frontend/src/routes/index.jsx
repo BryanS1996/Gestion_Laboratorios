@@ -7,8 +7,8 @@ import Register from '../pages/auth/Register';
 // Admin pages
 import AdminDashboard from '../pages/admin/dashboard';
 import Users from '../pages/admin/Users';
-import Configuracion from '../pages/admin/Configuracion';
 import ReportesAdmin from '../pages/admin/ReportesAdmin';
+import Configuracion from '../pages/admin/Configuracion';
 import EditUser from '../pages/admin/EditUser';
 import AdminLaboratorios from '../pages/admin/AdminLaboratorios';
 

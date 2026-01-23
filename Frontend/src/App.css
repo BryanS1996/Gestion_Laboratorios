@@ -74,3 +74,23 @@
 .animate-fade-in {
   animation: fadeIn 0.35s ease-out;
 }
+
+.input {
+  @apply w-full px-3 py-2 rounded-xl border border-slate-300
+         focus:ring-2 focus:ring-[#ae1b2c] focus:outline-none;
+}
+
+.label {
+  @apply text-sm font-medium text-slate-600;
+}
+
+.btn-primary {
+  @apply px-6 py-3 rounded-2xl bg-[#ae1b2c] text-white
+         font-medium hover:bg-[#951625]
+         transition active:scale-95;
+}
+
+.checkbox {
+  @apply rounded border-slate-300 text-[#ae1b2c]
+         focus:ring-[#ae1b2c];
+}
