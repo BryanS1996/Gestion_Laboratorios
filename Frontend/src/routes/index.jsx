@@ -72,7 +72,6 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="usuarios" element={<Users />} />
         <Route path="usuarios/:uid" element={<EditUser />} />

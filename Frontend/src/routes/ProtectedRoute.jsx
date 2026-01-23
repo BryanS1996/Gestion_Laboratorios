@@ -1,9 +1,8 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth.js';
+import { useAuth } from '../hooks/useAuth';
 
-// Componente para rutas protegidas
 const ProtectedRoute = ({ children, requiredRole }) => {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading } = useAuth();
 
   // 🔧 BYPASS SOLO EN DESARROLLO
   const isDevBypass = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
@@ -11,6 +10,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return children;
   }
 
+  // ⏳ ESPERAR A FIREBASE + BACKEND
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -19,14 +19,16 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+  // ❌ NO AUTENTICADO (solo cuando loading terminó)
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
+  // ⛔ ROL INCORRECTO
   if (requiredRole && user.role !== requiredRole) {
     return <Navigate to="/catalogo" replace />;
   }
-
+  
   return children;
 };
 

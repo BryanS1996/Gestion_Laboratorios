@@ -115,7 +115,7 @@ const Sidebar = ({ open, setOpen }) => {
           </NavLink>
 
           <NavLink
-            to="/admin/users"
+            to="/admin/usuarios"
             className={({ isActive }) => `${base} ${isActive ? active : inactive}`}
           >
             <Users className="w-5 h-5" />

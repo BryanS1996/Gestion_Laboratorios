@@ -10,6 +10,7 @@ export default function AppLayout() {
   const [open, setOpen] = useState(false);
 
   const { user } = useAuth();
+  
   useEffect(() => {
     if (user) {
       toast.dismiss();
