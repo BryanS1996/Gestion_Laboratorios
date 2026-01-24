@@ -38,7 +38,7 @@ const getAdminLaboratoriosEstado = async (req, res) => {
         userEmail: r.userEmail,
       });
 
-      if (r.estado === 'confirmada') {
+      if (r.estado === 'aprobada') {
         labsMap[r.laboratorioId].ocupado = true;
       }
     });
