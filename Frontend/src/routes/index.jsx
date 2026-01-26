@@ -14,7 +14,7 @@ import AdminLaboratorios from '../pages/admin/AdminLaboratorios';
 
 // Student pages
 import Catalog from '../pages/Catalog';
-import StudentReservations from '../pages/StudentReservations';
+import StudentReservations from '../pages/MyReservations';
 import Reportes from '../pages/Reportes';
 
 // Layouts
@@ -47,7 +47,7 @@ const AppRoutes = () => {
         <Route
           path="/mis-reservas"
           element={
-            <ProtectedRoute requiredRole="student">
+            <ProtectedRoute requiredRole={['student', 'professor']}>
               <StudentReservations />
             </ProtectedRoute>
           }
@@ -56,7 +56,7 @@ const AppRoutes = () => {
         <Route
           path="/reportes"
           element={
-            <ProtectedRoute requiredRole="student">
+            <ProtectedRoute requiredRole={['student', 'professor']}>
               <Reportes />
             </ProtectedRoute>
           }

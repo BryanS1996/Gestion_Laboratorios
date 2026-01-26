@@ -12,14 +12,13 @@ import {
   Users as UsersIcon,
   MapPin,
   Clock,
-  CheckCircle2,
   CreditCard
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const Catalog = () => {
-  const { user, loading, jwtToken } = useAuth();
+  const { user, loading, jwtToken, isStudent, isProfessor } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -164,6 +163,15 @@ const Catalog = () => {
     setModalOpen(true);
   };
 
+  const handleOpenReservationModal = (lab) => {
+    const canReserve = user?.role === 'student' || user?.role === 'professor';
+    if (!canReserve) {
+      toast.error('No tienes permisos para reservar.');
+      return;
+    }
+    openModalFor(lab);
+  };
+
   // --- LÓGICA DE PAGOS ---
   const processPremiumPayment = async (reservationData, toastId) => {
     toast.dismiss(toastId); 
@@ -187,7 +195,13 @@ const Catalog = () => {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error iniciando pago');
+
+      if (!res.ok) {
+        if (res.status === 409) {
+          throw new Error(data.error || 'Ese horario ya está reservado.');
+        }
+        throw new Error(data.error || 'Error creando reserva');
+      }
       
       if (data.url) {
         toast.success('Redirigiendo a Stripe...', { id: loadingToast });
@@ -204,6 +218,7 @@ const Catalog = () => {
 
   const processStandardReservation = async (reservationData) => {
     const loadingToast = toast.loading('Procesando reserva...');
+
     try {
       const res = await fetch(`${API_URL}/reservas`, {
         method: 'POST',
@@ -213,23 +228,32 @@ const Catalog = () => {
         },
         body: JSON.stringify(reservationData),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error creando reserva');
 
       setModalOpen(false);
-      toast.success('¡Reserva creada con éxito!', { id: loadingToast });
-      
+
+      // Calculamos si hubo cancelaciones (propio de la prioridad profesor)
+      const cancelledCount = Array.isArray(data.cancelled) ? data.cancelled.length : 0;
+
+      if (isProfessor && cancelledCount > 0) {
+        toast.success(`✅ Reserva confirmada. Se cancelaron ${cancelledCount} reserva(s) de estudiante por prioridad.`, { id: loadingToast });
+      } else {
+        toast.success('✅ Reserva confirmada.', { id: loadingToast });
+      }
+
       navigate('/mis-reservas', {
         state: {
           reservationCreated: true,
-          reservationData: data.reserva || reservationData,
+          reservationData: data, 
         },
       });
+
     } catch (e) {
       toast.error(e.message, { id: loadingToast });
     }
   };
-
   // Manejador del botón del Modal
   const handleReserve = (reservationData) => {
     const isPremium = selectedLab?.tipoAcceso === 'premium' || selectedLab?.tipoAcceso === 'Premium';
@@ -338,6 +362,7 @@ const Catalog = () => {
           const Icon = getLabIcon(lab);
           const { ocupado, label, color } = normalizeEstado(lab);
           const esPremium = lab.tipoAcceso === 'premium' || lab.tipoAcceso === 'Premium';
+          const disabledBtn = isProfessor ? false : ocupado;
 
           return (
             <div
@@ -400,16 +425,10 @@ const Catalog = () => {
                 </div>
 
                 <button
-                  onClick={() => {
-                    if (user?.role !== 'student') {
-                      toast.error('Solo los estudiantes pueden hacer reservas.');
-                    } else {
-                      openModalFor(lab);
-                    }
-                  }}
-                  disabled={ocupado}
+                  onClick={() => handleOpenReservationModal(lab)}
+                  disabled={disabledBtn} // 👈 USA LA NUEVA VARIABLE
                   className={`mt-auto w-full px-4 py-3 rounded-xl font-semibold text-sm transition-all shadow-sm active:scale-95 ${
-                    !ocupado
+                    !disabledBtn // 👈 CAMBIA ESTO TAMBIÉN PARA EL COLOR
                       ? (esPremium 
                           ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-200' 
                           : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200')
@@ -417,7 +436,7 @@ const Catalog = () => {
                   }`}
                 >
                   {ocupado 
-                    ? 'Agotado' 
+                    ? (isProfessor ? 'Reservar (Prioridad)' : 'Agotado') // Opcional: Cambiar texto para el profe
                     : (esPremium ? 'Reservar Premium' : 'Reservar')
                   }
                 </button>

@@ -13,12 +13,13 @@ const authMiddleware = (allowedRoles = []) => {
 
     // 🔧 DEV BYPASS (solo para desarrollo)
     if (process.env.DEV_BYPASS_AUTH === 'true') {
-      req.user = {
-        uid: 'dev-admin',
-        email: 'admin@dev.local',
-        role: 'admin',
-        displayName: 'Admin Dev',
-      };
+     req.user = {
+      uid: 'dev-prof',
+      email: 'profesor@dev.local',
+      role: 'professor',
+      displayName: 'Profesor Dev',
+      nombre: 'Profesor Dev',
+    };
 
       // Si hay restricción de roles, la respetamos
       if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.role)) {
@@ -43,8 +44,9 @@ const authMiddleware = (allowedRoles = []) => {
       req.user = {
         uid: decoded.uid,
         email: decoded.email,
-        role: decoded.role,
+        role: (decoded.role || 'student').toLowerCase(), // ✅ normaliza
         displayName: decoded.displayName,
+        nombre: decoded.nombre || decoded.displayName || 'Usuario', // ✅ para mailer
       };
 
       if (!allowedRoles || allowedRoles.length === 0) {

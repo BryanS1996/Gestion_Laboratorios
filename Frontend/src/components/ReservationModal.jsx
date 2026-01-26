@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { toast } from 'react-toastify'; // Ojo: Si usas react-hot-toast en Catalog, deberías usarlo aquí también para consistencia.
+import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// ✅ Agregamos 'defaultDate' a los props recibidos
 const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDate }) => {
   const [date, setDate] = useState(defaultDate || '');
   const [slots, setSlots] = useState([]);
@@ -17,7 +16,7 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
     return d.toISOString().split('T')[0];
   }, []);
 
-  // ✅ NUEVO: Sincronizar fecha cuando se abre el modal
+  // Sincronizar fecha cuando se abre el modal
   useEffect(() => {
     if (isOpen && defaultDate) {
       setDate(defaultDate);
@@ -26,7 +25,6 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
 
   useEffect(() => {
     const loadSlots = async () => {
-      // Validamos que haya fecha antes de buscar
       if (!isOpen || !lab?.id || !date || !jwtToken) return;
       try {
         setLoading(true);
@@ -52,29 +50,19 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
     e.preventDefault();
 
     if (!lab?.id) return;
-    if (!date) return alert('Por favor, selecciona una fecha');
-    if (!selectedSlot) return alert('Selecciona un horario disponible');
+    if (!date) return toast.error('Por favor, selecciona una fecha');
+    if (!selectedSlot) return toast.error('Selecciona un horario');
 
-    try {
-      // Llamamos a la función del padre (Catalog.jsx)
-      const res = await onReserve({
-        laboratorioId: lab.id,
-        laboratorioNombre: lab.nombre,
-        fecha: date,
-        horaInicio: selectedSlot.start,
-        horaFin: selectedSlot.end,
-      });
-
-      // Nota: Si onReserve maneja el éxito/error en el padre (Catalog), 
-      // quizás no necesites estos toasts aquí duplicados.
-      // Pero los dejo por si acaso tu lógica actual los requiere.
-      
-      // onClose(); // Esto lo suele manejar el padre tras el éxito
-    } catch (err) {
-      console.error(err);
-      toast.error('❌ Error al reservar.');
-    }
+    onReserve({
+      laboratorioId: lab.id,
+      laboratorioNombre: lab.nombre,
+      fecha: date,
+      horaInicio: selectedSlot.start,
+      horaFin: selectedSlot.end,
+    });
   };
+
+  // ✅ ERROR CORREGIDO: Se eliminó la llave extra que estaba aquí
 
   if (!isOpen) return null;
 
@@ -109,7 +97,6 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
               value={date}
               onChange={(e) => setDate(e.target.value)}
               min={minDate}
-              // 🔒 AQUÍ ESTÁ EL BLOQUEO
               disabled={true} 
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none bg-slate-100 text-slate-500 cursor-not-allowed"
               required
@@ -134,33 +121,44 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
               <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
                 {slots.map((s) => {
                   const active = selectedSlot?.label === s.label;
+                  
+                  // 🔥 AJUSTE LÓGICO: 
+                  // Permitir clic si está disponible O si está ocupado por estudiante (para prioridad profe)
+                  const isClickable = s.disponible || s.ocupadoPorEstudiante;
+
                   return (
                     <button
                       key={s.label}
                       type="button"
-                      disabled={!s.disponible}
-                      onClick={() => s.disponible && setSelectedSlot(s)}
+                      disabled={!isClickable} // Usamos la nueva variable
+                      onClick={() => isClickable && setSelectedSlot(s)}
                       className={`text-left px-3 py-2 rounded-md border text-sm transition relative
-                        ${s.disponible 
+                        ${isClickable 
                           ? 'border-slate-300 hover:border-blue-400 hover:bg-blue-50' 
                           : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'}
                         ${active ? 'border-blue-600 ring-1 ring-blue-500 bg-blue-50 z-10' : ''}
                       `}
                     >
                       <div className="flex items-center justify-between">
-                        <span className={`font-medium ${!s.disponible ? 'text-slate-400' : 'text-slate-700'}`}>
+                        <span className={`font-medium ${!isClickable ? 'text-slate-400' : 'text-slate-700'}`}>
                           {s.label}
                         </span>
-                        {/* Badge Ocupado/Disponible */}
+                        {/* Badge */}
                         {!s.disponible ? (
-                           <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
-                             Ocupado
-                           </span>
+                           s.ocupadoPorEstudiante ? (
+                            <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                              Prioridad
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
+                              Ocupado
+                            </span>
+                          )
                         ) : (
-                           active && <span className="text-blue-600">✓</span>
+                          active && <span className="text-blue-600">✓</span>
                         )}
                       </div>
-                      <div className={`text-xs mt-1 ${!s.disponible ? 'text-slate-300' : 'text-slate-500'}`}>
+                      <div className={`text-xs mt-1 ${!isClickable ? 'text-slate-300' : 'text-slate-500'}`}>
                         Duración: {s.end - s.start}h
                       </div>
                     </button>
@@ -169,7 +167,6 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
               </div>
             )}
             
-            {/* Mensaje si no hay slots */}
             {!loading && slots.length === 0 && !error && (
               <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-200">
                 No hay horarios disponibles para esta fecha.

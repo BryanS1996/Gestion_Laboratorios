@@ -66,7 +66,11 @@ export const AuthProvider = ({ children }) => {
 
         const data = await res.json();
 
-        setUser(data.user);
+        setUser({
+          ...data.user,
+          role: String(data.user?.role || 'student').trim().toLowerCase(),
+        });
+        
         setJwtToken(data.token);
       } catch (err) {
         console.error("Auth error:", err);
@@ -87,6 +91,8 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!user && !loading;
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
+  const isProfessor = user?.role === "professor";
+
 
   /* ============================
      🔐 Actions
@@ -131,6 +137,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         isAdmin,
         isStudent,
+        isProfessor,
 
         // actions
         login,

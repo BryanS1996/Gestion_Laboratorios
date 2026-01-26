@@ -6,11 +6,9 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 
   // 🔧 BYPASS SOLO EN DESARROLLO
   const isDevBypass = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
-  if (isDevBypass) {
-    return children;
-  }
+  if (isDevBypass) return children;
 
-  // ⏳ ESPERAR A FIREBASE + BACKEND
+  // ⏳ Esperar a que cargue auth completo
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -18,17 +16,34 @@ const ProtectedRoute = ({ children, requiredRole }) => {
       </div>
     );
   }
-
-  // ❌ NO AUTENTICADO (solo cuando loading terminó)
+  
+  console.log('USER ROLE =>', user?.role);
+  // ❌ No autenticado
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // ⛔ ROL INCORRECTO
-  if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to="/catalogo" replace />;
+  // ✅ Si la ruta pide rol, pero aún no está definido, NO redirigir: esperar
+  if (requiredRole && !user.role) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Cargando permisos...
+      </div>
+    );
   }
-  
+
+  // ⛔ Rol incorrecto (normalizado)
+  if (requiredRole) {
+    const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+
+    const userRole = String(user.role || '').trim().toLowerCase();
+    const allowedNormalized = allowed.map(r => String(r).trim().toLowerCase());
+
+    if (!allowedNormalized.includes(userRole)) {
+      return <Navigate to="/catalogo" replace />;
+    }
+  }
+
   return children;
 };
 
