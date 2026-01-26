@@ -24,16 +24,16 @@ export const useAdminLaboratorios = (fecha) => {
     },
 
     // Configuración de refresco automático
-    refetchInterval: 2000, // Cada 2 segundos (según tu código, aunque el comentario decía 4s)
-    refetchIntervalInBackground: true,
-    staleTime: 0,
-    cacheTime: 0,
-    refetchOnWindowFocus: true,
+    //refetchInterval: 2000, // Cada 2 segundos
+    //refetchIntervalInBackground: true,
+    //staleTime: 0,
+    //cacheTime: 0,
+    //refetchOnWindowFocus: true,
 
-    //refetchInterval: 15000,            // ✅ cada 15s (o 30s)
-    //refetchIntervalInBackground: false, // ✅ NO refresca si está en otra pestaña
-    //staleTime: 10_000,                 // ✅ evita refetch innecesario
-    //refetchOnWindowFocus: true,         // ✅ refresca al volver a la pestaña
+    refetchInterval: 30000,            // cada 15s (o 30s)
+    refetchIntervalInBackground: false, // NO refresca si está en otra pestaña
+    staleTime: 10_000,                 // evita refetch innecesario
+    refetchOnWindowFocus: true,         // refresca al volver a la pestaña
 
   });
 };
