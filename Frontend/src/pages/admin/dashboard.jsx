@@ -4,6 +4,7 @@ import { useDashboard } from '../../hooks/useDashboard';
 import { useAuth } from '../../hooks/useAuth';
 import Spinner from '../../components/admin/Spinner';
 import DoughnutChart from '../../components/admin/charts/DoughnutChart';
+import { DateTime } from 'luxon';
 
 import {
   Chart as ChartJS,
@@ -28,8 +29,9 @@ const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const isAdmin = user?.role === 'admin';
 
+const ZONE = 'America/Guayaquil';
   const [fecha, setFecha] = useState(
-    new Date().toISOString().slice(0, 10)
+    DateTime.now().setZone(ZONE).toISODate()
   );
 
   const {
@@ -53,7 +55,7 @@ const Dashboard = () => {
       acc[estado] = (acc[estado] || 0) + 1;
       return acc;
     },
-    { pendiente: 0, aprobada: 0, cancelada: 0 }
+    { pendiente: 0, confirmada: 0, cancelada: 0, cancelada_por_prioridad: 0 }
   );
 
   /* ================= LABORATORIOS ================= */

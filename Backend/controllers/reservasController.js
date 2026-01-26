@@ -2,11 +2,13 @@ const admin = require('../firebaseAdmin');
 const db = admin.firestore();
 const Stripe = require('stripe');
 const { confirmacionReserva } = require('../services/mailer');
+const { DateTime } = require('luxon');
 
+const ZONE = 'America/Guayaquil';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 /* =======================
-   SLOTS
+   HELPERS
 ======================= */
 const DEFAULT_SLOTS = [
   { label: '07:00-09:00', start: 7, end: 9 },
@@ -16,23 +18,15 @@ const DEFAULT_SLOTS = [
   { label: '16:00-18:00', start: 16, end: 18 },
 ];
 
-const toDateOnly = (d) => {
-  const date = new Date(d);
-  if (Number.isNaN(date.getTime())) return null;
-  date.setHours(0, 0, 0, 0);
-  return date;
+const dayRange = (isoDate) => {
+  const start = DateTime.fromISO(String(isoDate), { zone: ZONE }).startOf('day');
+  if (!start.isValid) return null;
+  const end = start.plus({ days: 1 });
+  return { start: start.toJSDate(), end: end.toJSDate() };
 };
 
 const normalizeRole = (role) => (role || 'student').toLowerCase();
-
-const toHourNumber = (v) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
-
-
-const overlaps = (aStart, aEnd, bStart, bEnd) =>
-  aStart < bEnd && aEnd > bStart;
+const overlaps = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
 
 /* =======================
    DISPONIBILIDAD
@@ -40,304 +34,215 @@ const overlaps = (aStart, aEnd, bStart, bEnd) =>
 const getAvailability = async (req, res) => {
   try {
     const { laboratorioId, fecha } = req.query;
-    const day = toDateOnly(fecha);
-    if (!laboratorioId || !day) {
+    if (!laboratorioId || !fecha) {
       return res.status(400).json({ error: 'laboratorioId y fecha son requeridos' });
     }
 
+    const range = dayRange(fecha);
+    if (!range) return res.status(400).json({ error: 'Fecha inválida' });
+
     const role = normalizeRole(req.user?.role);
 
+    // Consulta simplificada para evitar índices compuestos pesados
     const snap = await db
       .collection('reservas')
       .where('laboratorioId', '==', laboratorioId)
-      .where('fecha', '==', day)
-      .where('estado', 'in', ['confirmada', 'pendiente'])
+      .where('fecha', '>=', range.start)
+      .where('fecha', '<', range.end)
       .get();
 
-    const reservas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Filtramos estados en memoria (JS)
+    const reservas = snap.docs
+      .map((d) => d.data())
+      .filter((r) => ['confirmada', 'pendiente'].includes(r.estado));
 
-    const slots = DEFAULT_SLOTS.map(s => {
-      const conflictos = reservas.filter(r =>
+    const slots = DEFAULT_SLOTS.map((s) => {
+      const conflictos = reservas.filter((r) =>
         overlaps(s.start, s.end, Number(r.horaInicio), Number(r.horaFin))
       );
 
-      const ocupadoPorProfesor = conflictos.some(r => normalizeRole(r.userRole) === 'professor');
-      const ocupadoPorEstudiante = conflictos.some(r => normalizeRole(r.userRole) !== 'professor');
-
-      // Reglas:
-      // - student: NO disponible si hay cualquier conflicto
-      // - professor: solo NO disponible si hay conflicto con otro profesor
-      const disponible = role === 'professor'
-        ? !ocupadoPorProfesor
+      const ocupadoPorProfesor = conflictos.some((r) => normalizeRole(r.userRole) === 'professor');
+      
+      // Profesor puede reservar si no hay otro profesor. Estudiante solo si está vacío.
+      const disponible = (role === 'professor') 
+        ? !ocupadoPorProfesor 
         : conflictos.length === 0;
 
       return {
         ...s,
         disponible,
         ocupadoPorProfesor,
-        ocupadoPorEstudiante,
+        ocupadoPorEstudiante: conflictos.some((r) => normalizeRole(r.userRole) !== 'professor'),
       };
     });
 
-    res.json({ slots });
+    return res.json({ slots });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Error disponibilidad' });
+    console.error('[getAvailability] ERROR =>', e);
+    return res.status(500).json({ error: 'Error al obtener disponibilidad' });
   }
 };
 
 /* =======================
-   RESERVA BÁSICA
+   CREAR RESERVA (CON PRIORIDAD)
 ======================= */
 const createReserva = async (req, res) => {
-  console.log('ROLE =>', req.user?.role, 'UID =>', req.user?.uid);
   try {
-    const {
-      laboratorioId,
-      laboratorioNombre,
-      fecha,
-      horaInicio,
-      horaFin,
-      motivo,
-    } = req.body;
+    const { laboratorioId, laboratorioNombre, fecha, horaInicio, horaFin, motivo } = req.body;
 
-    const day = toDateOnly(fecha);
-    const hIni = toHourNumber(horaInicio);
-    const hFin = toHourNumber(horaFin);
-
-    if (!laboratorioId || !laboratorioNombre || !day || hIni == null || hFin == null) {
-      return res.status(400).json({ error: 'Datos de reserva inválidos' });
-    }
-    if (hIni >= hFin) {
-      return res.status(400).json({ error: 'horaInicio debe ser menor que horaFin' });
+    if (!laboratorioId || !laboratorioNombre || !fecha || horaInicio == null || horaFin == null) {
+      return res.status(400).json({ error: 'Faltan datos para la reserva' });
     }
 
-    const role = normalizeRole(req.user?.role);
+    const range = dayRange(fecha);
+    if (!range) return res.status(400).json({ error: 'Fecha inválida' });
 
-    const reservaBase = {
+    const requesterRole = normalizeRole(req.user.role);
+    const isProfessor = requesterRole === 'professor';
+
+    const reservaNueva = {
       laboratorioId,
       laboratorioNombre,
-      fecha: day,
-      horaInicio: hIni,
-      horaFin: hFin,
+      fecha: range.start, // Guardamos el inicio del día (Date object)
+      horaInicio: Number(horaInicio),
+      horaFin: Number(horaFin),
       motivo: motivo || null,
       estado: 'confirmada',
       tipo: 'basico',
       userId: req.user.uid,
       userEmail: req.user.email,
-      userRole: role, // ✅ clave para prioridad y disponibilidad
+      userRole: requesterRole,
       createdAt: new Date(),
     };
 
     const txResult = await db.runTransaction(async (tx) => {
       const q = db.collection('reservas')
         .where('laboratorioId', '==', laboratorioId)
-        .where('fecha', '==', day)
-        .where('estado', 'in', ['confirmada', 'pendiente']);
+        .where('fecha', '>=', range.start)
+        .where('fecha', '<', range.end);
 
       const snap = await tx.get(q);
 
-      const conflictos = snap.docs
-        .map(doc => ({ id: doc.id, ref: doc.ref, ...doc.data() }))
-        .filter(r => overlaps(hIni, hFin, Number(r.horaInicio), Number(r.horaFin)));
+      // Filtrar activas y detectar traslapes
+      const activas = snap.docs
+        .map(d => ({ id: d.id, ref: d.ref, ...d.data() }))
+        .filter(r => ['confirmada', 'pendiente'].includes(r.estado));
 
-      if (conflictos.length === 0) {
+      const conflictivas = activas.filter(r =>
+        overlaps(reservaNueva.horaInicio, reservaNueva.horaFin, Number(r.horaInicio), Number(r.horaFin))
+      );
+
+      if (conflictivas.length === 0) {
         const newRef = db.collection('reservas').doc();
-        tx.set(newRef, reservaBase);
-        return { createdId: newRef.id, cancelledIds: [] };
+        tx.set(newRef, reservaNueva);
+        return { id: newRef.id };
       }
 
-      // 1) Student (u otro rol) => si hay conflicto, se rechaza
-      if (role !== 'professor') {
-        const err = new Error('Horario no disponible');
-        err.status = 409;
-        throw err;
+      // Lógica de Prioridad
+      if (!isProfessor) {
+        throw new Error('Horario no disponible. Ya existe una reserva en este bloque.');
       }
 
-      // 2) Professor => si hay otro professor en conflicto, se rechaza
-      const hayProfesor = conflictos.some(r => normalizeRole(r.userRole) === 'professor');
+      const hayProfesor = conflictivas.some(r => normalizeRole(r.userRole) === 'professor');
       if (hayProfesor) {
-        const err = new Error('Ya existe una reserva de profesor en ese horario');
-        err.status = 409;
-        throw err;
+        throw new Error('Horario no disponible. Ya existe una reserva de otro profesor.');
       }
 
-      // 3) Professor vs Students => cancelar estudiantes y crear reserva profesor
-      const cancelledIds = [];
-      for (const r of conflictos) {
-        tx.update(r.ref, {
+      // Si llegamos aquí, es profesor y solo hay estudiantes: Cancelamos estudiantes
+      conflictivas.forEach(r => {
+        tx.update(r.ref, { 
           estado: 'cancelada_por_prioridad',
-          cancelledAt: new Date(),
-          cancelledByRole: 'professor',
+          cancelledAt: new Date()
         });
-        cancelledIds.push(r.id);
-      }
+      });
 
       const newRef = db.collection('reservas').doc();
-      tx.set(newRef, reservaBase);
-
-      return { createdId: newRef.id, cancelledIds };
+      tx.set(newRef, reservaNueva);
+      return { id: newRef.id };
     });
 
-    // Email confirmación al que reservó
     await confirmacionReserva({
       userEmail: req.user.email,
-      userNombre: req.user.nombre || 'Usuario',
+      userNombre: req.user.nombre || req.user.displayName || 'Usuario',
       laboratorioNombre,
       fecha,
-      horaInicio: hIni,
-      horaFin: hFin,
-      reservaId: txResult.createdId,
+      horaInicio: reservaNueva.horaInicio,
+      horaFin: reservaNueva.horaFin,
+      reservaId: txResult.id,
     }, false);
 
-    // (Opcional) aquí podrías notificar a estudiantes cancelados por prioridad
-    // txResult.cancelledIds -> ids canceladas
+    return res.status(201).json({ id: txResult.id, ...reservaNueva });
 
-    res.status(201).json({ id: txResult.createdId, ...reservaBase, cancelled: txResult.cancelledIds });
   } catch (e) {
-    console.error(e);
-    res.status(e.status || 500).json({ error: e.message || 'Error creando reserva' });
+    console.error('[createReserva] ERROR =>', e);
+    return res.status(400).json({ error: e.message || 'Error creando reserva' });
   }
 };
 
 /* =======================
-   MIS RESERVAS
+   OTRAS FUNCIONES (SIN CAMBIOS ESTRUCTURALES)
 ======================= */
 const getMyReservas = async (req, res) => {
-  const uid = req.user.uid;
-  console.log('[🔥 UID]', uid);
-
-  const snap = await db
-    .collection('reservas')
-    .where('userId', '==', uid)
-    .orderBy('createdAt', 'desc')
-    .get();
-  
-  console.log('[📦 Reservas encontradas]', snap.size);
-
-  const reservas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
-  res.json({ reservas });
+  try {
+    const snap = await db.collection('reservas')
+      .where('userId', '==', req.user.uid)
+      .orderBy('createdAt', 'desc').get();
+    const reservas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    res.json({ reservas });
+  } catch (e) { res.status(500).json({ error: 'Error al obtener mis reservas' }); }
 };
 
-/* =======================
-   ✅ OBTENER TODAS LAS RESERVAS (CATÁLOGO)
-   Corrige el formato de fecha para el frontend
-======================= */
 const getAllReservations = async (req, res) => {
   try {
-    const { fecha } = req.query;
-    let query = db.collection('reservas');
-
-    // Opcional: Filtrar en BD si viene fecha
-    if (fecha) {
-        const day = toDateOnly(fecha);
-        if (day) query = query.where('fecha', '==', day);
-    }
-
-    const snapshot = await query.get();
-    
+    const snapshot = await db.collection('reservas').get();
     const reservas = snapshot.docs.map(doc => {
       const data = doc.data();
-      let fechaLimpia = "Sin fecha";
-      if (data.fecha?.toDate) {
-        fechaLimpia = data.fecha.toDate().toISOString().split('T')[0];
-      } else if (data.fecha?._seconds) {
-        fechaLimpia = new Date(data.fecha._seconds * 1000).toISOString().split('T')[0];
-      } else if (typeof data.fecha === 'string') {
-        fechaLimpia = data.fecha.split('T')[0];
-      }
+      let f = "Sin fecha";
+      if (data.fecha?.toDate) f = data.fecha.toDate().toISOString().split('T')[0];
+      else if (data.fecha?._seconds) f = new Date(data.fecha._seconds * 1000).toISOString().split('T')[0];
+      return { id: doc.id, ...data, fecha: f };
+    });
+    res.status(200).json({ reservas });
+  } catch (e) { res.status(500).json({ error: 'Error al obtener catálogo' }); }
+};
 
-      return {
-        id: doc.id, 
-        ...data,
-        fecha: fechaLimpia // Enviamos la fecha ya como string limpio
-      };
+const createPremiumIntent = async (req, res) => {
+  try {
+    const { laboratorioId, laboratorioNombre, fecha, horaInicio, horaFin, precio } = req.body;
+    const reservaRef = await db.collection('reservas').add({
+      laboratorioId, laboratorioNombre, fecha: dayRange(fecha).start,
+      horaInicio, horaFin, estado: 'pendiente', tipo: 'premium',
+      userId: req.user.uid, userEmail: req.user.email,
+      userRole: normalizeRole(req.user?.role), createdAt: new Date(),
     });
 
-    res.status(200).json({ reservas });
-  } catch (error) {
-    console.error("Error al obtener todas las reservas:", error);
-    res.status(500).json({ error: 'Error al obtener reservas del sistema' });
-  }
+    const intent = await stripe.paymentIntents.create({
+      amount: precio * 100,
+      currency: 'usd',
+      metadata: { reservaId: reservaRef.id, userId: req.user.uid },
+    });
+    res.json({ clientSecret: intent.client_secret, reservaId: reservaRef.id });
+  } catch (e) { res.status(500).json({ error: 'Error en pago' }); }
 };
 
-/* =======================
-   STRIPE PAYMENT INTENT
-======================= */
-const createPremiumIntent = async (req, res) => {
-  const {
-    laboratorioId,
-    laboratorioNombre,
-    fecha,
-    horaInicio,
-    horaFin,
-    precio,
-  } = req.body;
-
-  const reservaRef = await db.collection('reservas').add({
-    laboratorioId,
-    laboratorioNombre,
-    fecha: toDateOnly(fecha),
-    horaInicio,
-    horaFin,
-    estado: 'pendiente',
-    tipo: 'premium',
-    userId: req.user.uid,
-    userEmail: req.user.email,
-    userRole: normalizeRole(req.user?.role),
-    createdAt: new Date(),
-  });
-
-  const intent = await stripe.paymentIntents.create({
-    amount: precio * 100,
-    currency: 'usd',
-    metadata: {
-      reservaId: reservaRef.id,
-      userId: req.user.uid,
-      laboratorioId,
-    },
-  });
-
-  res.json({
-    clientSecret: intent.client_secret,
-    reservaId: reservaRef.id,
-  });
-};
-
-/* =======================
-   CANCELAR
-======================= */
 const cancelReserva = async (req, res) => {
   try {
     const ref = db.collection('reservas').doc(req.params.id);
     const doc = await ref.get();
-
-    if (!doc.exists) return res.status(404).json({ error: 'Reserva no encontrada' });
-
+    if (!doc.exists) return res.status(404).json({ error: 'No existe' });
     const data = doc.data();
-    const role = normalizeRole(req.user?.role);
-
-    const esDuenio = data.userId === req.user.uid;
-    const esAdmin = role === 'admin';
-
-    if (!esDuenio && !esAdmin) {
-      return res.status(403).json({ error: 'No autorizado para cancelar esta reserva' });
+    if (data.userId !== req.user.uid && normalizeRole(req.user.role) !== 'admin') {
+      return res.status(403).json({ error: 'No autorizado' });
     }
-
-    await ref.update({ estado: 'cancelada', cancelledAt: new Date(), cancelledBy: req.user.uid });
-    res.json({ message: 'Reserva cancelada' });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Error cancelando reserva' });
-  }
+    await ref.update({ estado: 'cancelada', cancelledAt: new Date() });
+    res.json({ message: 'Cancelada' });
+  } catch (e) { res.status(500).json({ error: 'Error al cancelar' }); }
 };
-
 
 module.exports = {
   getAvailability,
   getMyReservas,
-  getAllReservations, // ✅ Asegúrate que esto esté aquí
+  getAllReservations,
   createReserva,
   createPremiumIntent,
   cancelReserva,

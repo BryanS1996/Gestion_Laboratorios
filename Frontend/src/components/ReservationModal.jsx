@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
-
+import { DateTime } from 'luxon';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const ZONE = 'America/Guayaquil';
 
 const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDate }) => {
   const [date, setDate] = useState(defaultDate || '');
@@ -10,10 +11,10 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
 
   const minDate = useMemo(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
+    return DateTime.now().setZone(ZONE).toISODate();
   }, []);
 
   // Sincronizar fecha cuando se abre el modal

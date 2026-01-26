@@ -1,3 +1,6 @@
+const { DateTime } = require('luxon');
+const ZONE = 'America/Guayaquil';
+
 const { getReservasCache } = require('../realtime/reservasListener');
 
 /* ============================
@@ -7,22 +10,49 @@ const getStats = async (req, res) => {
   try {
     const { reservas, updatedAt } = getReservasCache();
 
+    const toDateTimeZone = (fecha) => {
+      if (!fecha) return null;
+
+      // Firestore Timestamp (admin)
+      const seconds = fecha._seconds ?? fecha.seconds;
+      if (seconds) {
+        return DateTime.fromSeconds(seconds, { zone: 'utc' }).setZone(ZONE);
+      }
+
+      // Firestore Timestamp con toDate()
+      if (typeof fecha.toDate === 'function') {
+        return DateTime.fromJSDate(fecha.toDate()).setZone(ZONE);
+      }
+
+      // JS Date
+      if (fecha instanceof Date) {
+        return DateTime.fromJSDate(fecha).setZone(ZONE);
+      }
+
+      // string ISO o YYYY-MM-DD
+      if (typeof fecha === 'string') {
+        // si viene YYYY-MM-DD, esto lo toma como fecha en ZONE (no UTC)
+        const dt = DateTime.fromISO(fecha, { zone: ZONE });
+        return dt.isValid ? dt : null;
+      }
+
+      return null;
+    };
+
+    // fecha seleccionada (si no viene, hoy en Ecuador)
     const fechaParam = req.query.fecha
-      ? new Date(req.query.fecha)
-      : new Date();
+      ? DateTime.fromISO(req.query.fecha, { zone: ZONE }).startOf('day')
+      : DateTime.now().setZone(ZONE).startOf('day');
 
-    fechaParam.setHours(0, 0, 0, 0);
-
-    // Reservas del día seleccionado
-    const reservasDia = reservas.filter(r => {
-      if (!r.fecha) return false;
-      const f = new Date(r.fecha);
-      f.setHours(0, 0, 0, 0);
-      return f.getTime() === fechaParam.getTime();
+    const reservasDia = reservas.filter((r) => {
+      const dt = toDateTimeZone(r.fecha);
+      if (!dt) return false;
+      return dt.hasSame(fechaParam, 'day');
     });
 
+
     // Laboratorios ocupados en ese día (hora actual)
-    const horaActual = new Date().getHours();
+    const horaActual = DateTime.now().setZone(ZONE).hour;
     const labsOcupados = new Set();
 
     reservasDia.forEach(r => {
@@ -33,7 +63,7 @@ const getStats = async (req, res) => {
 
     res.json({
       stats: {
-        fecha: fechaParam.toISOString().slice(0, 10),
+        fecha: fechaParam.toISODate(),
         reservasHoy: reservasDia.length,
         laboratoriosOcupados: labsOcupados.size,
         reportesPendientes: null,

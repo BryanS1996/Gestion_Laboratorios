@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import ReservationModal from '../components/ReservationModal';
 import { useAuth } from '../hooks/useAuth';
 import toast, { Toaster } from 'react-hot-toast'; 
+import { DateTime } from 'luxon';
+
 import {
   Filter,
   CalendarDays,
@@ -17,6 +19,8 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const ZONE = 'America/Guayaquil';
+
 const Catalog = () => {
   const { user, loading, jwtToken, isStudent, isProfessor } = useAuth();
   const navigate = useNavigate();
@@ -29,7 +33,7 @@ const Catalog = () => {
   const [reservasDelDia, setReservasDelDia] = useState([]);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('Todos');
-  const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState(() => DateTime.now().setZone(ZONE).toISODate());
 
   // 1. Cargar Laboratorios
   useEffect(() => {
@@ -344,7 +348,7 @@ const Catalog = () => {
           className="px-3 py-2 rounded-xl border border-slate-200 bg-white"
         />
         <button
-          onClick={() => setFecha(new Date().toISOString().split('T')[0])}
+          onClick={() => setFecha(DateTime.now().setZone(ZONE).toISODate())}
           className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold"
         >
           Hoy

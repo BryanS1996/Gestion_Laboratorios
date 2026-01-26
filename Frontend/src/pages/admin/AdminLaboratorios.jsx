@@ -1,13 +1,68 @@
 import { useState } from 'react';
 import { useAdminLaboratorios } from '../../hooks/useAdminLaboratorios';
+import { DateTime } from 'luxon';
+
+const ZONE = 'America/Guayaquil';
+
+/* =========================
+   Helpers Luxon
+========================= */
+const toDT = (value) => {
+  if (!value) return null;
+
+  // Firestore timestamp tipo {_seconds: ...} o {seconds: ...}
+  const seconds = value._seconds ?? value.seconds;
+  if (seconds) return DateTime.fromSeconds(seconds, { zone: 'utc' }).setZone(ZONE);
+
+  // Timestamp con toDate()
+  if (typeof value?.toDate === 'function') {
+    return DateTime.fromJSDate(value.toDate()).setZone(ZONE);
+  }
+
+  // JS Date
+  if (value instanceof Date) {
+    return DateTime.fromJSDate(value).setZone(ZONE);
+  }
+
+  // string (YYYY-MM-DD o ISO)
+  if (typeof value === 'string') {
+    const dt = DateTime.fromISO(value, { zone: ZONE });
+    return dt.isValid ? dt : null;
+  }
+
+  return null;
+};
+
+const fmtFecha = (value) => {
+  const dt = toDT(value);
+  return dt ? dt.toFormat('dd/LL/yyyy') : '—';
+};
+
+const fmtHoraBloque = (horaInicio, horaFin) => {
+  if (horaInicio == null || horaFin == null) return '—';
+  const hi = DateTime.fromObject(
+    { hour: Number(horaInicio), minute: 0 },
+    { zone: ZONE }
+  ).toFormat('HH:mm');
+  const hf = DateTime.fromObject(
+    { hour: Number(horaFin), minute: 0 },
+    { zone: ZONE }
+  ).toFormat('HH:mm');
+  return `${hi}-${hf}`;
+};
+
+const fmtFechaHora = (value) => {
+  const dt = toDT(value);
+  return dt ? dt.toFormat('dd/LL/yyyy HH:mm') : '—';
+};
 
 /* =====================================================
    PAGE
 ===================================================== */
-
 const AdminLaboratorios = () => {
+  // ✅ Fecha "hoy" en Ecuador (evita el bug de ayer)
   const [fecha, setFecha] = useState(
-    new Date().toISOString().slice(0, 10)
+    DateTime.now().setZone(ZONE).toISODate()
   );
 
   const { data, isLoading, error } = useAdminLaboratorios(fecha);
@@ -33,7 +88,7 @@ const AdminLaboratorios = () => {
             Laboratorios
           </h1>
           <p className="text-sm text-gray-500">
-            Horarios reservados – {fecha}
+            Horarios reservados – {fmtFecha(fecha)}
           </p>
         </div>
 
@@ -102,26 +157,36 @@ const LabCard = ({ lab }) => {
           Horarios reservados
         </p>
 
-        {lab.horarios.length === 0 ? (
+        {lab.horarios?.length === 0 ? (
           <p className="text-xs text-gray-400">
             Sin reservas
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            {lab.horarios.map((r, i) => (
+            {lab.horarios?.map((r, i) => (
               <div
                 key={i}
                 className="text-xs border rounded-md p-2 bg-gray-50"
               >
+                {/* ✅ Hora exacta en bloque HH:mm-HH:mm */}
                 <p className="font-medium">
-                  {r.horaInicio} – {r.horaFin}
+                  {fmtHoraBloque(r.horaInicio, r.horaFin)}
                 </p>
+
                 <p className="text-gray-400 truncate">
                   {r.userEmail || '—'}
                 </p>
+
                 <p className="text-[10px] capitalize text-gray-500">
                   {r.estado}
                 </p>
+
+                {/* ✅ (Opcional) si tu backend manda createdAt */}
+                {r.createdAt && (
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Creada: {fmtFechaHora(r.createdAt)}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -130,7 +195,7 @@ const LabCard = ({ lab }) => {
 
       {/* FOOTER */}
       <div className="mt-3 text-xs text-gray-500">
-        Total reservas: {lab.horarios.length}
+        Total reservas: {lab.horarios?.length || 0}
       </div>
     </div>
   );

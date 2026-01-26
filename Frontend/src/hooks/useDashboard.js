@@ -29,7 +29,7 @@ export const useDashboard = (fecha) => {
       return res.json();
     },
 
-    refetchInterval: 10000,
+    refetchInterval: 1000,
     staleTime: 5000,
     refetchOnWindowFocus: false,
   });
