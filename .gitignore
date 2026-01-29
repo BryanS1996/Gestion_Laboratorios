@@ -4,8 +4,10 @@ node_modules/
 # Builds
 dist/
 build/
+logs/
 
 # Logs
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

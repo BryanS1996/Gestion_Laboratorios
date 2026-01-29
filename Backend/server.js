@@ -1,3 +1,5 @@
+const logger = require('./config/logger.base');
+const requestId = require('./middleware/requestId');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -6,75 +8,69 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ======================================================
-// 🗄️ CONEXIONES Y SERVICIOS
+// Connections and Services
 // ======================================================
 const connectMongo = require('./config/mongo');
 const { initReservasRealtime } = require('./realtime/reservasListener');
 
-// Conectar MongoDB
 connectMongo();
-
-// Inicializar listeners en tiempo real
 initReservasRealtime();
 
 // ======================================================
-// 🧩 MIDDLEWARES GLOBALES
+// MIDDLEWARES GLOBALS
 // ======================================================
 app.use(cors());
 
-// ⚠️ STRIPE WEBHOOK (DEBE IR ANTES DEL JSON PARSER)
+//logger.js
+logger.info('🚀 Logger initialized');
+
+// ⚠️ STRIPE WEBHOOK
 app.use('/api/stripe', require('./routes/stripe.webhook'));
 
-// Body parsers (después del webhook)
+// Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Logging
+// RequestId middleware
+app.use(requestId);
+
+// ======================================================
+// HEALTH CHECK
+// ======================================================
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Logging de requests
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+
+    logger.info(
+      `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`
+    );
+  });
+
   next();
 });
 
 // ======================================================
-// ❤️ HEALTH CHECK
-// ======================================================
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// ======================================================
-// 🚏 RUTAS DE LA API
+// API ROUTES
 // ======================================================
 
-// Auth
-app.use('/api/auth', require('./routes/auth.routes'));
-
-// Usuarios
-app.use('/api/users', require('./routes/userRoutes'));
-
-// Laboratorios
+app.use('/api/auth',         require('./routes/auth.routes'));
+app.use('/api/users',        require('./routes/userRoutes'));
 app.use('/api/laboratorios', require('./routes/laboratorios.routes'));
-
-// Reservas
-app.use('/api/reservas', require('./routes/reservas.routes'));
-
-// Reportes (usuarios)
-app.use('/api/reportes', require('./routes/reportes.routes'));
-
-// Dashboard
-app.use('/api/dashboard', require('./routes/dashboard.routes'));
-
-// 🔴 ADMIN (TODAS LAS RUTAS ADMIN AQUÍ)
-app.use('/api/admin', require('./routes/admin.routes'));
-
-// Stripe checkout (DESPUÉS del JSON parser)
-app.use('/api/stripe', require('./routes/stripe.routes'));
+app.use('/api/reservas',     require('./routes/reservas.routes'));
+app.use('/api/reportes',     require('./routes/reportes.routes'));
+app.use('/api/dashboard',    require('./routes/dashboard.routes'));
+app.use('/api/admin',        require('./routes/admin.routes'));
+app.use('/api/stripe',       require('./routes/stripe.routes'));
 
 // ======================================================
-// 📌 ROOT API INFO
+// ROOT API INFO
 // ======================================================
 app.get('/api', (req, res) => {
   res.json({
@@ -94,10 +90,10 @@ app.get('/api', (req, res) => {
 });
 
 // ======================================================
-// ❌ MANEJO DE ERRORES
+// Error Handling
 // ======================================================
 
-// 404
+/// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     error: 'Endpoint not found',
@@ -106,17 +102,13 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('❌ Error:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
-    timestamp: new Date().toISOString(),
-  });
-});
+// Global error handler
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
+
 
 // ======================================================
-// 🚀 START SERVER
+// START SERVER
 // ======================================================
 app.listen(PORT, () => {
   console.log(`\n✅ Backend corriendo en http://localhost:${PORT}`);

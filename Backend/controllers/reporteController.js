@@ -1,5 +1,5 @@
-// Backend/controllers/reporteController.js
 const Reporte = require('../models/Reporte');
+const reportLogger = require('../config/report.logger');
 const {
   uploadReportImage,
   deleteReportImage,
@@ -7,19 +7,25 @@ const {
 } = require('../services/b2Upload.service.js');
 
 /* ======================================================
-   1) CREAR REPORTE (con imagen opcional + reservaId)
+   CREATE REPORT (optional image + optional reservationId)
 ====================================================== */
-const crearReporte = async (req, res) => {
+const crearReporte = async (req, res, next) => {
   try {
     const {
       laboratorioId,
       laboratorioNombre,
       titulo,
       descripcion,
-      reservaId // 👈 NUEVO (opcional)
+      reservaId
     } = req.body || {};
 
     const { uid, email } = req.user;
+
+    // Log report creation attempt
+    reportLogger.info(
+      `Report creation attempt | user=${uid} reservation=${reservaId || 'N/A'}`,
+      { requestId: req.requestId }
+    );
 
     if (!laboratorioId || !descripcion) {
       return res.status(400).json({
@@ -27,9 +33,9 @@ const crearReporte = async (req, res) => {
       });
     }
 
-    // ✅ Crear instancia del reporte (NO tocamos imagen)
+    // Create report instance without image
     const nuevoReporte = new Reporte({
-      reservaId: reservaId || null, // 👈 TRAZABILIDAD
+      reservaId: reservaId || null,
       userId: uid,
       userEmail: email,
       laboratorioId,
@@ -41,9 +47,15 @@ const crearReporte = async (req, res) => {
       fechaCreacion: new Date()
     });
 
-    // ✅ Subida de imagen (SE MANTIENE EXACTAMENTE IGUAL)
+    // Upload image to Backblaze if provided
     if (req.file) {
       try {
+        // Log image upload request
+        reportLogger.info(
+          `Report image upload requested | user=${uid} reportId=${nuevoReporte._id}`,
+          { requestId: req.requestId }
+        );
+
         const { key } = await uploadReportImage({
           buffer: req.file.buffer,
           mimetype: req.file.mimetype,
@@ -52,8 +64,19 @@ const crearReporte = async (req, res) => {
         });
 
         nuevoReporte.imageKey = key;
+
+        // Log successful image upload
+        reportLogger.info(
+          `Report image uploaded | user=${uid} reportId=${nuevoReporte._id} key=${key}`,
+          { requestId: req.requestId }
+        );
       } catch (err) {
-        console.error('❌ Error al subir imagen a B2:', err);
+        // Log controlled image upload error
+        reportLogger.error(
+          `Report image upload failed | user=${uid} reportId=${nuevoReporte._id}`,
+          { requestId: req.requestId, stack: err.stack }
+        );
+
         return res.status(500).json({
           error: 'Error al subir la imagen del reporte'
         });
@@ -62,8 +85,10 @@ const crearReporte = async (req, res) => {
 
     await nuevoReporte.save();
 
-    console.log(
-      `📝 Nuevo reporte creado | usuario=${email} | reporte=${nuevoReporte._id} | reserva=${reservaId || 'N/A'}`
+    // Log successful report creation
+    reportLogger.info(
+      `Report created | reportId=${nuevoReporte._id} user=${uid} reservation=${reservaId || 'N/A'}`,
+      { requestId: req.requestId }
     );
 
     return res.status(201).json({
@@ -72,19 +97,23 @@ const crearReporte = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error al crear reporte:', error);
-    return res.status(500).json({
-      error: error.message || 'Error interno al registrar el reporte'
-    });
+    // Delegate unexpected errors to global error handler
+    next(error);
   }
 };
 
 /* ======================================================
-   2) OBTENER MIS REPORTES
+   GET USER REPORTS
 ====================================================== */
-const obtenerMisReportes = async (req, res) => {
+const obtenerMisReportes = async (req, res, next) => {
   try {
     const { uid } = req.user;
+
+    // Log reports fetch
+    reportLogger.info(
+      `Reports fetch | user=${uid}`,
+      { requestId: req.requestId }
+    );
 
     const reportes = await Reporte
       .find({ userId: uid })
@@ -96,70 +125,99 @@ const obtenerMisReportes = async (req, res) => {
       data: reportes
     });
   } catch (error) {
-    console.error('❌ Error al obtener reportes:', error);
-    return res.status(500).json({
-      error: 'Error al consultar reportes del usuario'
-    });
+    next(error);
   }
 };
 
 /* ======================================================
-   3) ELIMINAR REPORTE + IMAGEN EN B2
+   DELETE REPORT + IMAGE
 ====================================================== */
-const eliminarReporte = async (req, res) => {
+const eliminarReporte = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { uid } = req.user;
 
+    // Log report deletion attempt
+    reportLogger.info(
+      `Report deletion attempt | reportId=${id} user=${uid}`,
+      { requestId: req.requestId }
+    );
+
     const reporte = await Reporte.findById(id);
-    if (!reporte) return res.status(404).json({ error: 'Reporte no encontrado' });
-    if (reporte.userId !== uid) return res.status(403).json({ error: 'No autorizado' });
+    if (!reporte) {
+      return res.status(404).json({ error: 'Reporte no encontrado' });
+    }
+
+    if (reporte.userId !== uid) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
 
     if (reporte.imageKey) {
       try {
         await deleteReportImage(reporte.imageKey);
+
+        // Log successful image deletion
+        reportLogger.info(
+          `Report image deleted | reportId=${id} key=${reporte.imageKey}`,
+          { requestId: req.requestId }
+        );
       } catch (err) {
-        console.warn('⚠️ Error al borrar imagen de B2:', err.message);
+        // Log deletion warning but continue
+        reportLogger.warn(
+          `Report image delete failed | reportId=${id} key=${reporte.imageKey}`,
+          { requestId: req.requestId, stack: err.stack }
+        );
       }
     }
 
     await reporte.deleteOne();
 
-    console.log(`🗑️ Reporte eliminado | id=${id} | user=${uid}`);
+    // Log successful report deletion
+    reportLogger.info(
+      `Report deleted | reportId=${id} deletedBy=${uid}`,
+      { requestId: req.requestId }
+    );
 
     return res.json({ mensaje: 'Reporte eliminado correctamente' });
 
   } catch (error) {
-    console.error('❌ Error eliminando reporte:', error);
-    return res.status(500).json({
-      error: error.message || 'Error al eliminar el reporte'
-    });
+    next(error);
   }
 };
 
 /* ======================================================
-   4) OBTENER URL FIRMADA DE IMAGEN
+   GET SIGNED IMAGE URL
 ====================================================== */
-const obtenerUrlImagenReporte = async (req, res) => {
+const obtenerUrlImagenReporte = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { uid } = req.user;
 
+    // Log signed URL request
+    reportLogger.info(
+      `Report image URL requested | reportId=${id} user=${uid}`,
+      { requestId: req.requestId }
+    );
+
     const reporte = await Reporte.findById(id);
-    if (!reporte) return res.status(404).json({ error: 'Reporte no encontrado' });
-    if (reporte.userId !== uid) return res.status(403).json({ error: 'No autorizado' });
+    if (!reporte) {
+      return res.status(404).json({ error: 'Reporte no encontrado' });
+    }
+
+    if (reporte.userId !== uid) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
     if (!reporte.imageKey) {
       return res.status(404).json({ error: 'Este reporte no tiene imagen asociada' });
     }
 
-    const signedUrl = await getSignedReportImageUrl(reporte.imageKey, 300); // 5 min
+    const signedUrl = await getSignedReportImageUrl(reporte.imageKey, 300);
+
     return res.json({ url: signedUrl });
 
   } catch (error) {
-    console.error('❌ Error generando URL firmada:', error);
-    return res.status(500).json({
-      error: error.message || 'Error al generar la URL de la imagen'
-    });
+    next(error);
   }
 };
 

@@ -1,84 +1,119 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/authMiddleware');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 const admin = require('../firebaseAdmin');
 const db = admin.firestore();
 
-// POST /api/stripe/create-checkout-session
-router.post('/create-checkout-session', authMiddleware(['student', 'professor']), async (req, res) => {
+const paymentLogger = require('../config/payment.logger');
+
+/* ======================================================
+   CREATE STRIPE CHECKOUT SESSION
+====================================================== */
+router.post('/checkout', async (req, res, next) => {
   try {
-    const { laboratorioId, fecha, horaInicio, horaFin, motivo } = req.body;
-    const user = req.user;
-
-    if (!laboratorioId || !fecha || horaInicio == null || horaFin == null) {
-      return res.status(400).json({ error: 'Datos incompletos para la reserva' });
-    }
-
-    // 1. Validar que el laboratorio exista y sea premium
-    const labDoc = await db.collection('laboratorios').doc(laboratorioId).get();
-    if (!labDoc.exists) return res.status(404).json({ error: 'Laboratorio no encontrado' });
-
-    const lab = labDoc.data();
-    if (lab.tipoAcceso !== 'premium') {
-      return res.status(400).json({ error: 'Este laboratorio no requiere pago' });
-    }
-
-    const reservaTemp = {
+    const {
       laboratorioId,
-      laboratorioNombre: lab.nombre || null,
+      laboratorioNombre,
       fecha,
       horaInicio,
       horaFin,
-      motivo: motivo || null,
-      estado: 'pendiente', // se confirmará cuando Stripe pague
-      userId: user.uid,
-      userEmail: user.email,
-      userNombre: user.displayName || null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      precio = 5.0,
+    } = req.body;
+
+    const { uid, email } = req.user;
+
+    // Log checkout request
+    paymentLogger.info(
+      `Checkout request | user=${uid} lab=${laboratorioId} date=${fecha} time=${horaInicio}-${horaFin} price=${precio}`,
+      { requestId: req.requestId }
+    );
+
+    if (!laboratorioId || !fecha || horaInicio == null || horaFin == null) {
+      return res.status(400).json({ error: 'Datos incompletos para el pago' });
+    }
+
+    const nuevaReserva = {
+      userId: uid,
+      userEmail: email,
+      laboratorioId,
+      laboratorioNombre: laboratorioNombre || 'Laboratorio',
+      fecha,
+      horaInicio,
+      horaFin,
+      tipoAcceso: 'premium',
+      estado: 'pendiente',
+      pago: {
+        requerido: true,
+        monto: precio,
+        estado: 'pendiente',
+      },
+      expiraEn: admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() + 15 * 60 * 1000)
+      ),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // 2. Guardar reserva temporal (aún no pagada)
-    const reservaRef = await db.collection('reservas').add(reservaTemp);
+    // Store pending reservation
+    const reservaRef = await db.collection('reservas').add(nuevaReserva);
+    const reservaId = reservaRef.id;
 
-    // 3. Crear sesión de pago en Stripe
+    paymentLogger.info(
+      `Pending premium reservation stored | reservationId=${reservaId}`,
+      { requestId: req.requestId }
+    );
+
     const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
       payment_method_types: ['card'],
-      customer_email: user.email,
-      metadata: {
-        reservaId: reservaRef.id,
-        userId: user.uid,
-        userEmail: user.email,
-        userNombre: user.displayName || 'Usuario',
-        laboratorioNombre: lab.nombre || 'Laboratorio',
-      },
+      mode: 'payment',
+      customer_email: email,
       line_items: [
         {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: `Reserva: ${lab.nombre} (${fecha} ${horaInicio}-${horaFin})`,
+              name: `Reserva Premium: ${laboratorioNombre || 'Lab'}`,
+              description: `Fecha: ${fecha} | ${horaInicio}:00 - ${horaFin}:00`,
             },
-            // Multiplicamos por 100 porque Stripe maneja centavos (ej: 5.00 USD = 500 centavos)
-            unit_amount: lab.precioUsd ? Math.round(lab.precioUsd * 100) : 200, 
+            unit_amount: Math.round(precio * 100),
           },
           quantity: 1,
         },
       ],
-      success_url: `${process.env.CLIENT_URL}/reservas?success=true`,
-      cancel_url: `${process.env.CLIENT_URL}/reservas?cancelled=true`,
+      success_url: `http://localhost:5173/pago-exitoso?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `http://localhost:5173/catalogo?payment=cancelled`,
+      metadata: {
+        reservaId,
+        userId: uid,
+        laboratorioId,
+      },
     });
 
-    // ✅ 4. RESPONDER AL FRONTEND (ESTO FALTABA)
-    // Devolvemos el ID de sesión y la URL para que el frontend redirija
-    res.json({ id: session.id, url: session.url });
+    paymentLogger.info(
+      `Stripe checkout session created | sessionId=${session.id} reservationId=${reservaId}`,
+      { requestId: req.requestId }
+    );
+
+    await reservaRef.update({
+      'pago.stripeSessionId': session.id,
+      'pago.estado': 'pendiente',
+    });
+
+    paymentLogger.info(
+      `Reservation updated with Stripe session | reservationId=${reservaId}`,
+      { requestId: req.requestId }
+    );
+
+    return res.json({ url: session.url });
 
   } catch (error) {
-    // ✅ 5. MANEJO DE ERRORES (ESTO FALTABA)
-    console.error('Error creando sesión de pago:', error);
-    res.status(500).json({ error: 'Error al iniciar el pago con Stripe' });
+    paymentLogger.error(
+      'Error while creating Stripe checkout session',
+      { requestId: req.requestId, stack: error.stack }
+    );
+    next(error);
   }
 });
 
