@@ -1,65 +1,77 @@
-const logger = require('./config/logger.base');
-const requestId = require('./middleware/requestId');
-const express = require('express');
-const cors = require('cors');
 require('dotenv').config();
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+const express = require('express');
+const cors = require('cors');
 
-// ======================================================
-// Connections and Services
-// ======================================================
+const serverLogger = require('./config/server.logger');
+const requestId = require('./middleware/requestId');
+
 const connectMongo = require('./config/mongo');
 const { initReservasRealtime } = require('./realtime/reservasListener');
 
+/* ======================================================
+   CREATE EXPRESS APP 
+   - Must be initialized before any app.use()
+====================================================== */
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+/* ======================================================
+   STRIPE WEBHOOK (RAW BODY ONLY)
+   - MUST be mounted BEFORE express.json()
+   - Now 'app' is defined, so this won't crash
+====================================================== */
+app.use('/api/stripe', require('./routes/stripe.webhook'));
+
+/* ======================================================
+   INIT SERVICES
+====================================================== */
 connectMongo();
 initReservasRealtime();
 
-// ======================================================
-// MIDDLEWARES GLOBALS
-// ======================================================
+/* ======================================================
+   GLOBAL MIDDLEWARES
+====================================================== */
 app.use(cors());
 
-//logger.js
-logger.info('🚀 Logger initialized');
+// Assign requestId as early as possible for tracking
+app.use(requestId);
 
-// ⚠️ STRIPE WEBHOOK
-app.use('/api/stripe', require('./routes/stripe.webhook'));
-
-// Body parsers
+/* ======================================================
+   BODY PARSERS (AFTER WEBHOOK)
+   - These process JSON bodies for all other routes
+====================================================== */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// RequestId middleware
-app.use(requestId);
-
-// ======================================================
-// HEALTH CHECK
-// ======================================================
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Logging de requests
+/* ======================================================
+   REQUEST LOGGING
+====================================================== */
 app.use((req, res, next) => {
   const start = Date.now();
 
   res.on('finish', () => {
     const duration = Date.now() - start;
 
-    logger.info(
-      `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`
+    serverLogger.info(
+      `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`,
+      { requestId: req.requestId }
     );
   });
 
   next();
 });
 
-// ======================================================
-// API ROUTES
-// ======================================================
+/* ======================================================
+   HEALTH CHECK
+====================================================== */
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 
+/* ======================================================
+   API ROUTES
+====================================================== */
 app.use('/api/auth',         require('./routes/auth.routes'));
 app.use('/api/users',        require('./routes/userRoutes'));
 app.use('/api/laboratorios', require('./routes/laboratorios.routes'));
@@ -69,31 +81,19 @@ app.use('/api/dashboard',    require('./routes/dashboard.routes'));
 app.use('/api/admin',        require('./routes/admin.routes'));
 app.use('/api/stripe',       require('./routes/stripe.routes'));
 
-// ======================================================
-// ROOT API INFO
-// ======================================================
+/* ======================================================
+   ROOT API INFO
+====================================================== */
 app.get('/api', (req, res) => {
   res.json({
     message: 'Laboratorios API',
     version: '1.0.0',
-    endpoints: {
-      auth: '/api/auth',
-      users: '/api/users',
-      laboratorios: '/api/laboratorios',
-      reservas: '/api/reservas',
-      reportes: '/api/reportes',
-      dashboard: '/api/dashboard',
-      admin: '/api/admin',
-      stripe: '/api/stripe',
-    },
   });
 });
 
-// ======================================================
-// Error Handling
-// ======================================================
-
-/// 404 handler
+/* ======================================================
+   404 HANDLER
+====================================================== */
 app.use((req, res) => {
   res.status(404).json({
     error: 'Endpoint not found',
@@ -102,17 +102,20 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler
+/* ======================================================
+   GLOBAL ERROR HANDLER
+====================================================== */
 const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);
 
-
-// ======================================================
-// START SERVER
-// ======================================================
+/* ======================================================
+   START SERVER
+====================================================== */
 app.listen(PORT, () => {
-  console.log(`\n✅ Backend corriendo en http://localhost:${PORT}`);
-  console.log(`📚 API disponible en http://localhost:${PORT}/api\n`);
+  serverLogger.info(
+    `🚀 Server started on port ${PORT}`,
+    { requestId: 'bootstrap' }
+  );
 });
 
 module.exports = app;

@@ -223,7 +223,11 @@ const createReserva = async (req, res, next) => {
       reservaId: txResult.id,
     }, false);
 
-    return res.status(201).json({ id: txResult.id, ...reservaNueva });
+    return res.status(201).json({
+      message: '✅ Reserva confirmada. Te hemos enviado un correo con los detalles.',
+      id: txResult.id,
+      ...reservaNueva,
+    });
 
   } catch (error) {
     next(error);

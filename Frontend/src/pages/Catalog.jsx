@@ -182,7 +182,7 @@ const Catalog = () => {
     const loadingToast = toast.loading('Iniciando pasarela de pago...');
 
     try {
-      const res = await fetch(`${API_URL}/stripe/create-checkout-session`, {
+      const res = await fetch(`${API_URL}/stripe/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

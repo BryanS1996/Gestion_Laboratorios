@@ -1,28 +1,31 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from "react-router-dom";
 
 // Auth
-import Login from '../pages/auth/Login';
-import Register from '../pages/auth/Register';
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
 
 // Admin pages
-import AdminDashboard from '../pages/admin/dashboard';
-import Users from '../pages/admin/Users';
-import ReportesAdmin from '../pages/admin/ReportesAdmin';
-import Configuracion from '../pages/admin/Configuracion';
-import EditUser from '../pages/admin/EditUser';
-import AdminLaboratorios from '../pages/admin/AdminLaboratorios';
+import AdminDashboard from "../pages/admin/dashboard";
+import Users from "../pages/admin/Users";
+import ReportesAdmin from "../pages/admin/ReportesAdmin";
+import Configuracion from "../pages/admin/Configuracion";
+import EditUser from "../pages/admin/EditUser";
+import AdminLaboratorios from "../pages/admin/AdminLaboratorios";
 
 // Student pages
-import Catalog from '../pages/Catalog';
-import StudentReservations from '../pages/MyReservations';
-import Reportes from '../pages/Reportes';
+import Catalog from "../pages/Catalog";
+import StudentReservations from "../pages/MyReservations";
+import Reportes from "../pages/Reportes";
+
+// Payment success page (create this file)
+import PagoExitoso from "../pages/PagoExitoso";
 
 // Layouts
-import AppLayout from '../components/AppLayout';
-import AdminLayout from '../components/admin/AdminLayout';
+import AppLayout from "../components/AppLayout";
+import AdminLayout from "../components/admin/AdminLayout";
 
 // Guard
-import ProtectedRoute from './ProtectedRoute';
+import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes = () => {
   return (
@@ -34,7 +37,10 @@ const AppRoutes = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* 🟦 USUARIO / ESTUDIANTE */}
+      {/* Stripe success redirect (PUBLIC) */}
+      <Route path="/pago-exitoso" element={<PagoExitoso />} />
+
+      {/* USUARIO / ESTUDIANTE */}
       <Route
         element={
           <ProtectedRoute>
@@ -47,7 +53,7 @@ const AppRoutes = () => {
         <Route
           path="/mis-reservas"
           element={
-            <ProtectedRoute requiredRole={['student', 'professor']}>
+            <ProtectedRoute requiredRole={["student", "professor"]}>
               <StudentReservations />
             </ProtectedRoute>
           }
@@ -56,7 +62,7 @@ const AppRoutes = () => {
         <Route
           path="/reportes"
           element={
-            <ProtectedRoute requiredRole={['student', 'professor']}>
+            <ProtectedRoute requiredRole={["student", "professor"]}>
               <Reportes />
             </ProtectedRoute>
           }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { createContext, useEffect, useState, useRef } from "react";
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -17,43 +17,52 @@ export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [jwtToken, setJwtToken] = useState(
-    localStorage.getItem("jwtToken")
-  );
+
+  // Read token from localStorage on boot
+  const [jwtToken, setJwtToken] = useState(localStorage.getItem("jwtToken"));
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 🧠 evita múltiples llamadas al backend
+  // Prevent multiple /users/login calls
   const hasFetchedProfile = useRef(false);
+  const lastUid = useRef(null);
 
   /* ============================
-     🔐 Sincronizar JWT
-     ============================ */
+     Sync JWT to localStorage
+  ============================ */
   useEffect(() => {
-    if (jwtToken) {
-      localStorage.setItem("jwtToken", jwtToken);
-    } else {
-      localStorage.removeItem("jwtToken");
-    }
+    if (jwtToken) localStorage.setItem("jwtToken", jwtToken);
+    else localStorage.removeItem("jwtToken");
   }, [jwtToken]);
 
   /* ============================
-     🔐 Firebase Auth Listener (UNO SOLO)
-     ============================ */
+     Firebase Auth Listener
+  ============================ */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        hasFetchedProfile.current = false;
-        setUser(null);
-        setJwtToken(null);
-        setLoading(false);
-        return;
-      }
-
-      // ⚠️ evita múltiples /users/login
-      if (hasFetchedProfile.current) return;
-
       try {
+        if (!firebaseUser) {
+          hasFetchedProfile.current = false;
+          lastUid.current = null;
+          setUser(null);
+          setJwtToken(null);
+          setLoading(false);
+          return;
+        }
+
+        // If user changed, allow fetching again
+        if (lastUid.current !== firebaseUser.uid) {
+          lastUid.current = firebaseUser.uid;
+          hasFetchedProfile.current = false;
+        }
+
+        // Avoid duplicate calls, but NEVER leave loading stuck
+        if (hasFetchedProfile.current) {
+          setLoading(false);
+          return;
+        }
+
         hasFetchedProfile.current = true;
 
         const idToken = await firebaseUser.getIdToken();
@@ -65,13 +74,15 @@ export const AuthProvider = ({ children }) => {
         });
 
         const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Login failed");
 
         setUser({
           ...data.user,
-          role: String(data.user?.role || 'student').trim().toLowerCase(),
+          role: String(data.user?.role || "student").trim().toLowerCase(),
         });
-        
+
         setJwtToken(data.token);
+        setError(null);
       } catch (err) {
         console.error("Auth error:", err);
         setError(err);
@@ -86,17 +97,19 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /* ============================
-     🔐 Helpers
-     ============================ */
-  const isAuthenticated = !!user && !loading;
+     Helpers
+  ============================ */
+
+  // IMPORTANT: allow auth if token exists (prevents Stripe redirect -> login loop)
+  const isAuthenticated = (!!jwtToken || !!user) && !loading;
+
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
   const isProfessor = user?.role === "professor";
 
-
   /* ============================
-     🔐 Actions
-     ============================ */
+     Actions
+  ============================ */
   const login = (email, password) =>
     signInWithEmailAndPassword(auth, email, password);
 
@@ -104,22 +117,16 @@ export const AuthProvider = ({ children }) => {
     signInWithPopup(auth, new GoogleAuthProvider());
 
   const register = async (email, password, displayName) => {
-    const cred = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-    if (displayName) {
-      await updateProfile(cred.user, { displayName });
-    }
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if (displayName) await updateProfile(cred.user, { displayName });
     return cred.user;
   };
 
-  const resetPassword = (email) =>
-    sendPasswordResetEmail(auth, email);
+  const resetPassword = (email) => sendPasswordResetEmail(auth, email);
 
   const logout = async () => {
     hasFetchedProfile.current = false;
+    lastUid.current = null;
     await signOut(auth);
     setUser(null);
     setJwtToken(null);
