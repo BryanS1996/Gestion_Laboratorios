@@ -233,5 +233,5 @@ Software Engineering Student | Full-Stack Developer
 React · Node.js · Docker · AWS · Stripe · Firebase
 
 ---
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/BryanS1996/Gestion_Laboratorios)
 > This project follows real-world production patterns including secure payments, private storage, and containerized cloud deployment.
