@@ -28,7 +28,7 @@ const {
 } = require('../controllers/adminReportesController');
 
 // =======================
-// 📌 RUTAS ADMIN
+// 📌 ROUTES ADMIN
 // =======================
 
 // 🧪 LABORATORIOS

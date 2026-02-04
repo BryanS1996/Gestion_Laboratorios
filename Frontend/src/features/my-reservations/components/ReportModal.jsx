@@ -24,6 +24,9 @@ export default function ReportModal({
       fd.append("titulo", form.titulo);
       fd.append("descripcion", form.descripcion);
       fd.append("reservaId", reserva.id);
+      fd.append("laboratorioId", reserva.laboratorioId);
+      fd.append("laboratorioNombre", reserva.laboratorioNombre || "");
+
       if (image) fd.append("imagen", image);
 
       await reportesService.create(jwtToken, fd);

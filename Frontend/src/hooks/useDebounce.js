@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 
-// Hook personalizado para aplicar debounce a un valor (como un input)
+// Custom hook for debouncing values such as search inputs
 const useDebounce = (value, delay = 1000) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
-    // Temporizador que actualiza el valor después del retardo
+    // Timeout to update the debounced value after the specified delay
     const timer = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
 
-    // Limpia el temporizador si el valor cambia antes del delay
+    // Clean up the timeout if the value changes before the delay expires
     return () => clearTimeout(timer);
   }, [value, delay]);
 

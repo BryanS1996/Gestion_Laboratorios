@@ -16,7 +16,7 @@ const EditUser = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // 🔹 Cargar info del usuario
+  // 🔹 Load user info
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -33,12 +33,12 @@ const EditUser = () => {
     fetchUser();
   }, [uid, jwtToken]);
 
-  // 🔹 Guardar rol
+  // 🔹 Save role
   const saveRole = async () => {
     try {
       setSaving(true);
 
-      // Ruta admin real en backend: PATCH /admin/users/:uid/role
+      // Actual admin backend route: PATCH /admin/users/:uid/role
       await apiPatch(`/admin/users/${uid}/role`, { role }, { jwtToken });
       navigate('/admin/usuarios');
     } catch (err) {
@@ -60,7 +60,7 @@ const EditUser = () => {
     <div className="min-h-screen bg-slate-50 p-8">
       <Card className="max-w-3xl mx-auto p-6 rounded border">
 
-        {/* Volver */}
+        {/* Return */}
         <Button
           variant="ghost"
           onClick={() => navigate('/admin/usuarios')}
@@ -106,7 +106,7 @@ const EditUser = () => {
           </div>
         </div>
 
-        {/* Rol */}
+        {/* Role */}
         <div className="mt-6">
           <label className="block text-sm font-medium mb-1">
             Rol del usuario
@@ -121,7 +121,7 @@ const EditUser = () => {
           </Select>
         </div>
 
-        {/* Guardar */}
+        {/* Save */}
         <Button
           onClick={saveRole}
           disabled={saving}

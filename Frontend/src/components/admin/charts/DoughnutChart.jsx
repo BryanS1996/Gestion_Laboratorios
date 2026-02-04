@@ -4,7 +4,7 @@ const DoughnutChart = ({ dataStats }) => {
   const pendiente = dataStats?.pendiente ?? 0;
   const confirmada = dataStats?.confirmada ?? 0;
 
-  // Si quieres sumar cancelada_por_prioridad dentro de canceladas:
+  // To aggregate cancelled_by_priority within the cancelled category:
   const cancelada =
     (dataStats?.cancelada ?? 0) + (dataStats?.cancelada_por_prioridad ?? 0);
 

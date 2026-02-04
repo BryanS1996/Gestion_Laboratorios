@@ -30,10 +30,10 @@ const AdminLayout = () => {
       {/* SIDEBAR */}
       <Sidebar open={open} setOpen={setOpen} />
 
-      {/* CONTENIDO */}
+      {/* CONTENT */}
       <div className="flex-1 flex flex-col overflow-hidden">
         
-        {/* TOP BAR (solo mobile) */}
+        {/* TOP BAR (mobile only) */}
         <div className="lg:hidden flex items-center gap-2 p-4 border-b bg-white shrink-0">
           <button onClick={() => setOpen(true)}>
             <Menu />
@@ -41,7 +41,7 @@ const AdminLayout = () => {
           <span className="font-semibold">Admin Panel</span>
         </div>
 
-        {/* PÁGINAS ADMIN (SCROLL AQUÍ) */}
+        {/* ADMIN PAGES (SCROLL HERE) */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <Outlet />
         </main>

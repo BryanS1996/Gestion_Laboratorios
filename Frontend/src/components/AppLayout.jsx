@@ -6,7 +6,6 @@ import toast from "react-hot-toast";
 import { useAuth } from "../hooks/useAuth";
 
 export default function AppLayout() {
-  // 👇 ESTADO QUE FALTABA
   const [open, setOpen] = useState(false);
 
   const { user } = useAuth();
@@ -26,7 +25,7 @@ export default function AppLayout() {
       {/* SIDEBAR */}
       <Sidebar open={open} setOpen={setOpen} />
 
-      {/* CONTENIDO */}
+      {/* CONTENT */}
       <div className="flex-1 flex flex-col">
         
         {/* TOP BAR MOBILE */}

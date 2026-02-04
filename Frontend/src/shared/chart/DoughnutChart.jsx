@@ -2,9 +2,8 @@ import { useMemo } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { ensureChartRegistry } from './chartRegistry';
 
-/**
- * Wrapper seguro para <Doughnut />.
- */
+
+ // Wrapper 
 export default function DoughnutChart({ data, options, className = '' }) {
   ensureChartRegistry();
 

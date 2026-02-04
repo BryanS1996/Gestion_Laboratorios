@@ -4,7 +4,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { getFirebaseUsers, firebaseLogin } = require('../controllers/authController');
 
 router.post('/firebase', firebaseLogin);
-// Solo admin puede ver los usuarios de Firebase Auth
+// // Only admins can view Firebase Auth users
 router.get('/firebase-users', authMiddleware(['admin']), getFirebaseUsers);
 
 module.exports = router;

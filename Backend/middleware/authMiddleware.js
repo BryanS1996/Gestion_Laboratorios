@@ -1,17 +1,10 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-/**
- * Middleware de protección por JWT (emitido por este backend).
- *
- * Uso:
- *  - authMiddleware() => solo autenticación (cualquier rol)
- *  - authMiddleware(['admin']) => autenticación + roles permitidos
- */
 const authMiddleware = (allowedRoles = []) => {
   return (req, res, next) => {
 
-    // 🔧 DEV BYPASS (solo para desarrollo)
+    // 🔧 DEV BYPASS
     if (process.env.DEV_BYPASS_AUTH === 'true') {
      req.user = {
       uid: 'dev-prof',
@@ -21,7 +14,7 @@ const authMiddleware = (allowedRoles = []) => {
       nombre: 'Profesor Dev',
     };
 
-      // Si hay restricción de roles, la respetamos
+      // If role restrictions exist, they are respected
       if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.role)) {
         return res.status(403).json({ error: 'Prohibido (DEV)' });
       }
@@ -29,7 +22,7 @@ const authMiddleware = (allowedRoles = []) => {
       return next();
     }
 
-    // 🔐 Flujo normal
+    // Normal Flow
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
@@ -44,7 +37,7 @@ const authMiddleware = (allowedRoles = []) => {
       req.user = {
         uid: decoded.uid,
         email: decoded.email,
-        role: (decoded.role || 'student').toLowerCase(), // ✅ normaliza
+        role: (decoded.role || 'student').toLowerCase(), // ✅ normalizer
         displayName: decoded.displayName,
         nombre: decoded.nombre || decoded.displayName || 'Usuario', // ✅ para mailer
       };

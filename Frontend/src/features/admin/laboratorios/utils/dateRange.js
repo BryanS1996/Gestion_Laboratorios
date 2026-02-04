@@ -2,7 +2,7 @@ import { DateTime } from 'luxon';
 import { ZONE } from '../../../../config/env';
 
 /**
- * Construye un rango basado en una fecha ISO (yyyy-mm-dd) y un modo.
+ * Builds a range based on an ISO date (yyyy-mm-dd) and a mode.
  * mode: 'day' | 'week' | 'month'
  */
 export const buildRange = (baseISO, mode) => {
@@ -16,7 +16,7 @@ export const buildRange = (baseISO, mode) => {
   }
 
   if (mode === 'week') {
-    // Lunes fijo
+    // Lunes fixed
     const start = base.set({ weekday: 1 }).startOf('day');
     const end = start.plus({ days: 7 });
     return {

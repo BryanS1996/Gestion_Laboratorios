@@ -1,4 +1,6 @@
-// Backend/routes/stripe.routes.js
+const { DateTime } = require("luxon");
+const ZONE = "America/Guayaquil";
+
 const express = require("express");
 const router = express.Router();
 
@@ -12,19 +14,13 @@ const db = admin.firestore();
 const paymentLogger = require("../config/payment.logger");
 
 /* ----------------------------- Helpers ----------------------------- */
-
-// Safe ISO ("YYYY-MM-DD") -> Date (midday avoids timezone day shift)
-function isoToSafeDate(iso) {
-  const [y, m, d] = String(iso).split("-").map(Number);
-  return new Date(y, m - 1, d, 12, 0, 0);
-}
-
 // Day start Timestamp (align with reservasController approach)
 function dayStartTimestampFromISO(iso) {
-  const base = isoToSafeDate(iso);
-  base.setHours(0, 0, 0, 0);
-  return admin.firestore.Timestamp.fromDate(base);
+  const dt = DateTime.fromISO(String(iso), { zone: ZONE }).startOf("day");
+  if (!dt.isValid) throw new Error("Invalid ISO date");
+  return admin.firestore.Timestamp.fromDate(dt.toJSDate());
 }
+
 
 // Server-side price (never trust client price)
 async function getPremiumPrice(laboratorioId) {

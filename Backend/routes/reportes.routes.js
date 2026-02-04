@@ -8,13 +8,13 @@ const {
   crearReporte,
   obtenerMisReportes,
   eliminarReporte,
-  obtenerUrlImagenReporte // ✅ usa el controller correcto
+  obtenerUrlImagenReporte // Use conrrect controller
 } = require('../controllers/reporteController');
 
-// Mis reportes
+// My Reports
 router.get('/mis-reportes', authMiddleware(['student', 'professor']), obtenerMisReportes);
 
-// Crear nuevo reporte con imagen
+// Create new report with image
 router.post(
   '/',
   authMiddleware(['student', 'professor', 'admin']),
@@ -22,14 +22,14 @@ router.post(
   crearReporte
 );
 
-// 🔐 Obtener imagen (URL firmada, solo desde controller)
+// Get image (Signed URL, controller access only)
 router.get(
   '/:id/imagen-url',
   authMiddleware(['student', 'professor']),
   obtenerUrlImagenReporte
 );
 
-// Eliminar
+// Delete
 router.delete(
   '/:id',
   authMiddleware(['student', 'professor']),

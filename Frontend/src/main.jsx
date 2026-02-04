@@ -6,7 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/authContext.jsx";
 
-// ✅ Crear el cliente de TanStack Query
+// ✅ Create the TanStack Query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -18,7 +18,7 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    {/* 🔐 AUTH GLOBAL (UNO SOLO) */}
+    {/* 🔐 AUTH GLOBAL */}
     <AuthProvider>
 
       {/* 🔄 DATA FETCHING */}

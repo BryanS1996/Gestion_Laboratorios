@@ -6,24 +6,24 @@ const db = getFirestore();
 
 const getAdminUsers = async (req, res) => {
   try {
-    // 1️⃣ Usuarios desde Firebase Auth
+    // 1) Users from Firebase Auth
     const listUsers = await admin.auth().listUsers();
 
     const users = await Promise.all(
       listUsers.users.map(async (authUser) => {
         const uid = authUser.uid;
 
-        // 2️⃣ Datos del usuario en Firestore
+        // 2️ User data in Firestore
         const userDoc = await db.collection('users').doc(uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
 
-        // 3️⃣ Contar reservas (Firestore)
+        // 3️ Count reservs (Firestore)
         const reservasSnap = await db
           .collection('reservas')
           .where('userId', '==', uid)
           .get();
 
-        // 4️⃣ Contar reportes (Mongo)
+        // 4️ Count reports (Mongo)
         const reportesCount = await Reporte.countDocuments({ userId: uid });
 
         return {

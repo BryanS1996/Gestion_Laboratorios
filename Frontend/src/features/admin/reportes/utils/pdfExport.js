@@ -25,7 +25,6 @@ export const exportReportesPDF = async ({ reportes }) => {
     const logoBase64 = await loadImageAsBase64(logoUCE);
     doc.addImage(logoBase64, 'PNG', 14, 10, 30, 30);
   } catch {
-    // Si el logo no carga, igual generamos PDF.
   }
 
   doc.setFontSize(16);

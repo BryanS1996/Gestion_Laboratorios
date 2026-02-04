@@ -3,22 +3,22 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const protectRoute = require('../middleware/authMiddleware');
 
-// 🔐 Registro de nuevo usuario (sin protección)
+// 🔐 New user registration (unprotected)
 router.post('/register', userController.registerUser);
 
-// 🔐 Login: Firebase Token → JWT propio
+// 🔐 Login: Firebase Token → Custom JWT
 router.post('/login', userController.login);
 
-// 👤 Obtener perfil (requiere JWT válido)
+// 👤 Get profile (valid JWT required)
 router.get('/profile', protectRoute(['admin', 'professor', 'student']), userController.getProfile);
 
-// ✏️ Actualizar perfil (requiere JWT válido)
+// ✏️ Update profile (valid JWT required)
 router.put('/profile', protectRoute(['admin', 'professor', 'student']), userController.updateProfile);
 
-// 🔧 Cambiar rol de usuario (solo admin)
+// 🔧 Change user role (admin only)
 router.put('/change-role/:uid', protectRoute(['admin']), userController.changeUserRole);
 
-// 🗑️ Eliminar usuario (solo admin)
+// 🗑️ Delete user (admin only)
 router.delete('/:uid', protectRoute(['admin']), userController.deleteUser);
 
 module.exports = router;

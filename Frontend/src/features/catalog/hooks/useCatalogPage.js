@@ -22,7 +22,7 @@ export function useCatalogPage() {
   const [typeFilter, setTypeFilter] = useState('Todos');
   const [fecha, setFecha] = useState(() => DateTime.now().setZone(ZONE).toISODate());
 
-  // Detectar retorno de pago cancelado
+  // Detect return from canceled payment
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('payment') === 'cancelled') {
@@ -96,7 +96,7 @@ export function useCatalogPage() {
       return;
     }
 
-    // Si es admin (o no es estudiante/profesor), evitamos reservar
+    // If admin (or not student/professor), prevent booking
     const role = user?.role;
     if (role === 'admin') {
       toast.error('Un administrador no puede reservar.');
@@ -105,7 +105,7 @@ export function useCatalogPage() {
 
     const premium = isPremiumLab(lab);
     if (premium) {
-      // Confirmación premium
+      // Premium confirmation
       const ok = window.confirm('Este laboratorio es Premium y requiere pago. ¿Deseas continuar?');
       if (!ok) return;
 

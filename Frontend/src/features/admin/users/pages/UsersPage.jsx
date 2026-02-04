@@ -48,7 +48,7 @@ const Users = () => {
           </Button>
         </div>
 
-        {/* TABLA */}
+        {/* TABLE */}
         <Card className="rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-100 text-left">

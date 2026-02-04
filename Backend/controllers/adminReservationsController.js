@@ -1,7 +1,7 @@
 const admin = require('../firebaseAdmin');
 const db = admin.firestore();
 
-// Utilidades compartidas
+// Shared utilities
 const toDateOnly = (yyyyMmDd) => {
   const d = new Date(yyyyMmDd);
   if (Number.isNaN(d.getTime())) return null;
@@ -28,7 +28,7 @@ const listReservas = async (req, res) => {
       q = q.where('fecha', '==', day);
     }
 
-    // Intentar ordenar por createdAt si existe índice, si no, devolver sin order
+    // Attempt to sort by createdAt if indexed, else return unordered
     let snap;
     try {
       snap = await q.orderBy('createdAt', 'desc').limit(limit).get();
@@ -45,7 +45,7 @@ const listReservas = async (req, res) => {
 };
 
 // PATCH /api/admin/reservas/:id
-// body opcional: estado, fecha (YYYY-MM-DD), horaInicio, horaFin, laboratorioId, laboratorioNombre, motivo
+// body optional: estado, fecha (YYYY-MM-DD), horaInicio, horaFin, laboratorioId, laboratorioNombre, motivo
 const updateReserva = async (req, res) => {
   try {
     const { id } = req.params;
@@ -70,7 +70,7 @@ const updateReserva = async (req, res) => {
     if (motivo !== undefined) patch.motivo = motivo;
     if (laboratorioNombre !== undefined) patch.laboratorioNombre = laboratorioNombre;
 
-    // Cambios de fecha/horario/lab requieren revalidar solapamiento
+    // Changes to date/schedule/lab require overlap revalidation
     let newFecha = current.fecha;
     let newLabId = current.laboratorioId;
     let newStart = current.horaInicio;
@@ -105,7 +105,7 @@ const updateReserva = async (req, res) => {
       return res.status(400).json({ error: 'Rango de horas inválido' });
     }
 
-    // Solo validar si cambió algo que afecte disponibilidad
+    // Only validate if changes affect availability
     const needsCheck = Boolean(laboratorioId || fecha || horaInicio != null || horaFin != null);
     if (needsCheck && (patch.estado ? ['confirmada', 'pendiente'].includes(patch.estado) : ['confirmada', 'pendiente'].includes(current.estado))) {
       const snap = await db

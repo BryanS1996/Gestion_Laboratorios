@@ -47,8 +47,6 @@ export default function ReporteDetalleModal({ reporte, onClose }) {
         </div>
       </div>
 
-      {/* En el backend actual no existe endpoint admin para URL firmada.
-          Solo mostramos imagen si ya viene como URL. */}
       {reporte?.imageKey && isLikelyUrl(reporte.imageKey) && (
         <div className="mt-4">
           <p className="font-semibold text-sm mb-1">Imagen adjunta:</p>

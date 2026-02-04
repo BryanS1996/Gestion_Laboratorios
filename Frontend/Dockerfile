@@ -7,7 +7,7 @@ RUN npm ci
 
 COPY . .
 
-# Vite: en build se “inyecta” VITE_API_URL
+# Vite: VITE_API_URL is "injected" ON build
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 

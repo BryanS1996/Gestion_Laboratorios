@@ -9,7 +9,7 @@ const getAdminLaboratoriosEstado = async (req, res) => {
     const { fecha } = req.query; // "YYYY-MM-DD"
     if (!fecha) return res.status(400).json({ error: 'Fecha requerida' });
 
-    // 1) Rango del día en zona Ecuador
+    // 1) Range of the day in zone Ecuador
     const startDT = DateTime.fromISO(String(fecha), { zone: ZONE }).startOf('day');
     if (!startDT.isValid) return res.status(400).json({ error: 'Fecha inválida' });
     const endDT = startDT.plus({ days: 1 });
@@ -17,7 +17,7 @@ const getAdminLaboratoriosEstado = async (req, res) => {
     const start = startDT.toJSDate();
     const end = endDT.toJSDate();
 
-    // 2) Cargar TODOS los laboratorios (para que se muestren aunque no tengan reservas)
+    // 2) Load ALL laboratories (so that they are displayed even if they have no reservations)
     const labsSnap = await db.collection('laboratorios').get();
     const labsMap = {};
 
@@ -34,8 +34,7 @@ const getAdminLaboratoriosEstado = async (req, res) => {
       };
     });
 
-    // 3) Traer reservas del día por rango (evita el bug de fecha string vs timestamp)
-    //    Esto NO requiere índice compuesto (solo rango sobre un campo).
+    // 3) Fetch reservations of the day by range (avoids the string date vs timestamp bug)
     const reservasSnap = await db
       .collection('reservas')
       .where('fecha', '>=', start)
@@ -46,7 +45,7 @@ const getAdminLaboratoriosEstado = async (req, res) => {
       const r = doc.data() || {};
       if (!r.laboratorioId) return;
 
-      // Si el lab no existe en colección, lo creamos “fallback”
+      // If the lab doesn't exist in the collection, we create a “fallback”
       if (!labsMap[r.laboratorioId]) {
         labsMap[r.laboratorioId] = {
           laboratorioId: r.laboratorioId,
@@ -59,7 +58,7 @@ const getAdminLaboratoriosEstado = async (req, res) => {
         };
       }
 
-      // Guardamos el horario
+      // Save the schedule
       labsMap[r.laboratorioId].horarios.push({
         horaInicio: r.horaInicio,
         horaFin: r.horaFin,
@@ -68,13 +67,13 @@ const getAdminLaboratoriosEstado = async (req, res) => {
         createdAt: r.createdAt || null,
       });
 
-      // Ocupado si hay al menos una reserva activa
+      // Occupied if any reservation is active
       if (r.estado === 'confirmada' || r.estado === 'pendiente') {
         labsMap[r.laboratorioId].ocupado = true;
       }
     });
 
-    // 4) Ordenar horarios por horaInicio
+    // 4) Sort schedules by horaInicio
     Object.values(labsMap).forEach((lab) => {
       lab.horarios.sort((a, b) => Number(a.horaInicio) - Number(b.horaInicio));
     });

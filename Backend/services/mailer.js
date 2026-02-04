@@ -2,32 +2,32 @@ const { reservaConfirmacionHTML } = require('../utils/emailTemplates');
 const sendEmail = require('../utils/sendEmail');
 
 /**
- * Envía un correo de confirmación de reserva con diseño personalizado.
- * @param {Object} reserva - Objeto con los datos de la reserva
- * @param {boolean} conPago - true si es reserva premium
+ * Sends a reservation confirmation email with custom design.
+ * @param {Object} reserva - Object with reservation data
+ * @param {boolean} conPago - true if it is a premium reservation
  */
 exports.confirmacionReserva = async (reserva, conPago = false) => {
-  // 1. Validación básica para evitar errores si llega null
+  // 1. Basic validation to avoid errors if null is received
   if (!reserva) return;
 
   try {
-    // 2. Construir el horario legible (Asumiendo que tienes horaInicio y horaFin)
-    // Si tu objeto reserva YA tiene un string 'horario', puedes usar ese, 
-    // pero basado en tu código anterior, se calculaba así:
+    // 2. Build readable schedule (Assuming you have horaInicio and horaFin)
+    // If your reserva object ALREADY has a 'horario' string, you can use that, 
+    // but based on your previous code, it was calculated like this:
     const textoHorario = reserva.horario 
       ? reserva.horario 
       : `${reserva.horaInicio}:00 - ${reserva.horaFin}:00`;
 
-    // 3. Generar el HTML
+    // 3. Generate HTML
     const html = reservaConfirmacionHTML({
       nombre: reserva.userNombre || reserva.userEmail.split('@')[0],
       laboratorio: reserva.laboratorioNombre,
-      fecha: reserva.fecha, // Asegúrate de que sea legible (ej: "2026-01-20")
-      horario: textoHorario, // <--- Aquí corregimos la sintaxis y la lógica
+      fecha: reserva.fecha, // Make sure it's readable (e.g.: "2026-01-20")
+      horario: textoHorario, // <--- Fixed syntax and logic here
       reservaId: reserva.reservaId || reserva._id || 'N/A',
     });
 
-    // 4. Enviar el correo
+    // 4. Send the email
     await sendEmail({
       to: reserva.userEmail,
       subject: '✅ Confirmación de Reserva',
@@ -37,7 +37,7 @@ exports.confirmacionReserva = async (reserva, conPago = false) => {
     console.log(`📨 Email enviado a ${reserva.userEmail}`);
 
   } catch (error) {
-    // 5. Manejo de errores para que no rompa el flujo del usuario
-    console.error(`❌ Error enviando email a ${reserva?.userEmail}:`, error.message);
+    // 5. Error handling so it doesn't break the user flow
+    console.error(`❌ Error enviado email a ${reserva?.userEmail}:`, error.message);
   }
 };

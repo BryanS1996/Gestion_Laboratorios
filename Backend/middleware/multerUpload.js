@@ -1,9 +1,9 @@
 const multer = require('multer');
 
-// Memoria: no guarda archivos en disco
+// In-memory: does not save files to disk
 const storage = multer.memoryStorage();
 
-// Filtro para aceptar solo ciertos tipos de archivo (opcional pero recomendado)
+// Filter to accept only certain file types (optional but recommended)
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
   
@@ -14,12 +14,12 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configuración de Multer
+// Multer configuration
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // Máximo 10 MB
+    fileSize: 10 * 1024 * 1024 // Máxim 10 MB
   }
 });
 

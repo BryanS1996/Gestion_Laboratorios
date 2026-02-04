@@ -12,23 +12,19 @@ const {
   cancelReserva,
 } = require('../controllers/reservasController');
 
-/* =========================================
-   RUTAS DE RESERVAS
-========================================= */
-
-// 1. Disponibilidad (Slots para el modal)
+// 1. Availability (Slots for the modal)
 router.get('/availability', authMiddleware(), getAvailability);
 
-// 2. Mis Reservas (Historial del usuario)
+// 2. My Reservations (User history)
 router.get('/mine', authMiddleware(), getMyReservas);
 
-// 3. Crear Reserva (Solo estudiantes y profesores)
+// 3. Create Reservation (Students and Professors only)
 router.post('/', authMiddleware(['student', 'professor']), createReserva);
 
-// 4. Cancelar Reserva (Cualquier usuario autenticado puede intentar, el controlador valida si es dueño)
+// 4. Cancel Reservation (Any authenticated user can attempt, controller validates ownership)
 router.patch('/:id/cancel', authMiddleware(), cancelReserva);
 
-// 5. ✅ OBTENER TODAS (Para el Catálogo - Esta era la que fallaba 404)
+// 5. Get AllReservations
 router.get('/', authMiddleware(), getAllReservations);
 
 module.exports = router;

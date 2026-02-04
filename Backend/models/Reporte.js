@@ -1,15 +1,14 @@
-// Backend/models/Reporte.js
 const mongoose = require('mongoose');
 
 const reporteSchema = new mongoose.Schema({
-  // 🔗 Trazabilidad con la reserva (opcional)
+  // 🔗 Traceability with the reservation (optional)
   reservaId: {
     type: String,
     required: false,
     index: true
   },
 
-  // Usuario
+  // User
   userId: {
     type: String,
     required: true
@@ -19,7 +18,7 @@ const reporteSchema = new mongoose.Schema({
     required: true
   },
 
-  // Laboratorio
+  // Laboratory
   laboratorioId: {
     type: String,
     required: true
@@ -29,7 +28,7 @@ const reporteSchema = new mongoose.Schema({
     required: true
   },
 
-  // Contenido del reporte
+  // Report Content
   titulo: {
     type: String,
     required: true
@@ -39,20 +38,20 @@ const reporteSchema = new mongoose.Schema({
     required: true
   },
 
-  // Imagen (Backblaze B2)
+  // Image (Backblaze B2)
   imageKey: {
     type: String,
     default: null
   },
 
-  // Estado del reporte
+  // Report status
   estado: {
     type: String,
     enum: ['pendiente', 'revisado', 'resuelto'],
     default: 'pendiente'
   },
 
-  // Fecha
+  // Date
   fechaCreacion: {
     type: Date,
     default: Date.now

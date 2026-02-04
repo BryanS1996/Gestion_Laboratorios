@@ -6,7 +6,7 @@ import { fmtHoraBloque, fmtFechaHora } from './formatters';
 import { fmtDateISOToLabel } from './formatters';
 
 /**
- * Genera y descarga un PDF con las reservas.
+ * Generate and download PDF report of reservations
  * @param {{
  *  exportMode: 'day'|'week'|'month',
  *  baseFechaISO: string,

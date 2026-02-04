@@ -8,7 +8,7 @@ import LabGrid from '../components/LabGrid';
 export default function CatalogPage() {
   const { state, data, flags, actions } = useCatalogPage();
 
-  // Si está cargando auth, esperamos (evita flickers)
+  // If auth is loading, wait (prevents flickers)
   if (flags.isLoading) {
     return (
       <CatalogShell>
