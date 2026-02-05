@@ -75,7 +75,8 @@ export default function MyReservationsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh] text-slate-600 gap-2">
+      // Updated loading text color to be visible on dark background
+      <div className="flex items-center justify-center min-h-[50vh] text-slate-300 gap-2">
         <Spinner />
         <span className="text-sm">Cargando reservas...</span>
       </div>
@@ -85,7 +86,16 @@ export default function MyReservationsPage() {
   return (
     <div className="min-h-screen p-4 md:p-8 bg-transparent">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-bold mb-6 text-slate-800">Mis Reservas</h1>
+
+        {/* HEADER UPDATED */}
+        <div className="mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            Mis Reservas
+          </h1>
+          <p className="text-slate-300 text-sm md:text-base">
+            Consulta el historial, estado de tus solicitudes y gestiona los pagos pendientes.
+          </p>
+        </div>
 
         <ReservationsMobileList
           reservations={reservations}
