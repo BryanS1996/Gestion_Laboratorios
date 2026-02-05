@@ -10,7 +10,7 @@ export default function LabCard({ lab, Icon, status, isPremium, canReserve, onOp
     <Card className="p-4 flex flex-col">
       <div className="flex items-start gap-3">
         <div className="h-10 w-10 rounded-2xl bg-slate-100 flex items-center justify-center">
-          {Icon ? <Icon size={20} className="text-slate-700" /> : null}
+          {Icon ? <Icon size={20} className="text-slate-600" /> : null}
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">

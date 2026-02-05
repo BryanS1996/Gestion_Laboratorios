@@ -33,19 +33,25 @@ const Users = () => {
       <div className="max-w-7xl mx-auto">
 
         {/* HEADER */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-slate-800">
-            Usuarios
-          </h1>
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold text-slate-100">
+              Usuarios
+            </h1>
 
-          <Button
-            variant="secondary"
-            onClick={refetch}
-            className="flex items-center gap-2 text-sm"
-          >
-            <RefreshCw size={18} />
-            Refrescar
-          </Button>
+            <Button
+              variant="secondary"
+              onClick={refetch}
+              className="flex items-center gap-2 text-sm"
+            >
+              <RefreshCw size={18} />
+              Refrescar
+            </Button>
+          </div>
+
+          <p className="text-slate-400 text-sm">
+            Gestiona los roles y permisos de los usuarios del sistema
+          </p>
         </div>
 
         {/* TABLE */}

@@ -92,7 +92,7 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
         </Card>
 
         <div className="mb-4">
-          <label className="label block mb-1">Fecha</label>
+          <label className="block mb-1 text-sm font-medium text-slate-900">Fecha</label>
           <input
             type="date"
             value={date}
@@ -102,14 +102,14 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
             className="input bg-slate-100 text-slate-500 cursor-not-allowed"
             required
           />
-          <p className="text-xs text-slate-400 mt-1 italic">
+          <p className="text-xs text-slate-600 mt-1 italic">
             * Para cambiar la fecha, cierra esta ventana y selecciónala en el catálogo.
           </p>
         </div>
 
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <label className="label block mb-0">Horario</label>
+            <label className="block mb-0 text-sm font-medium text-slate-900">Horario</label>
             {loading && (
               <span className="text-xs text-slate-600 inline-flex items-center gap-2">
                 <Spinner />
@@ -121,7 +121,7 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
           {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
 
           {!date ? (
-            <p className="text-sm text-slate-500">Fecha no válida.</p>
+            <p className="text-sm text-slate-700">Fecha no válida.</p>
           ) : (
             <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
               {slots.map((s) => {
@@ -135,15 +135,13 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
                     disabled={!isClickable}
                     onClick={() => isClickable && setSelectedSlot(s)}
                     className={`text-left px-3 py-2 rounded-md border text-sm transition relative
-                      ${
-                        isClickable
-                          ? "border-slate-300 hover:border-blue-400 hover:bg-blue-50"
-                          : "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
+                      ${isClickable
+                        ? "border-slate-300 hover:border-blue-400 hover:bg-blue-50"
+                        : "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
                       }
-                      ${
-                        active
-                          ? "border-blue-600 ring-1 ring-blue-500 bg-blue-50 z-10"
-                          : ""
+                      ${active
+                        ? "border-blue-600 ring-1 ring-blue-500 bg-blue-50 z-10"
+                        : ""
                       }
                     `}
                   >

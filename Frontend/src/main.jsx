@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./context/authContext.jsx";
+import { TOAST_CONFIG } from "./config/theme.config.js";
 
 // ✅ Create the TanStack Query client
 const queryClient = new QueryClient({
@@ -24,17 +25,12 @@ createRoot(document.getElementById("root")).render(
       {/* 🔄 DATA FETCHING */}
       <QueryClientProvider client={queryClient}>
 
-        {/* 🔔 TOASTER GLOBAL */}
+        {/* 🔔 TOASTER GLOBAL - Configuración centralizada */}
         <Toaster
-          position="top-right"
+          position={TOAST_CONFIG.position}
           toastOptions={{
-            duration: 2000,
-            style: {
-              borderRadius: "12px",
-              background: "#fff",
-              color: "#1e293b",
-              boxShadow: "0 10px 25px rgba(0,0,0,.1)",
-            },
+            duration: TOAST_CONFIG.duration,
+            style: TOAST_CONFIG.style,
           }}
         />
 

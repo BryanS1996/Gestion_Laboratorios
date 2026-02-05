@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 /*
-  Global background
+  Global background - Elegant Dark Theme
   - Applied once at the document level so every screen inherits it.
   - This keeps the app visually consistent without touching page logic.
+  - Slightly lighter gradient for better text contrast
 */
 html,
 body,
@@ -14,6 +15,6 @@ body,
 }
 
 body {
-  /* Light red → blue gradient across the whole app */
-  @apply bg-gradient-to-br from-rose-100 via-white to-sky-100 text-slate-900 antialiased;
+  /* Elegant dark gradient: lighter for better text visibility */
+  @apply bg-gradient-to-br from-slate-800 via-blue-900 to-slate-800 text-slate-100 antialiased;
 }

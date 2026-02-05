@@ -4,13 +4,13 @@ export default function ReportesTable({ reportes, onRowClick, onChangeEstado }) 
   return (
     <div className="bg-white border rounded-lg overflow-hidden">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50">
+        <thead className="bg-slate-50">
           <tr>
-            <th className="p-3 text-left">Fecha</th>
-            <th className="p-3 text-left">Laboratorio</th>
-            <th className="p-3 text-left">Usuario</th>
-            <th className="p-3 text-left">Título</th>
-            <th className="p-3 text-left">Estado</th>
+            <th className="p-3 text-left font-semibold text-slate-900">Fecha</th>
+            <th className="p-3 text-left font-semibold text-slate-900">Laboratorio</th>
+            <th className="p-3 text-left font-semibold text-slate-900">Usuario</th>
+            <th className="p-3 text-left font-semibold text-slate-900">Título</th>
+            <th className="p-3 text-left font-semibold text-slate-900">Estado</th>
           </tr>
         </thead>
 
@@ -18,15 +18,15 @@ export default function ReportesTable({ reportes, onRowClick, onChangeEstado }) 
           {reportes.map((r) => (
             <tr
               key={r._id}
-              className="border-t hover:bg-gray-50 cursor-pointer"
+              className="border-t hover:bg-slate-50 cursor-pointer"
               onClick={() => onRowClick(r)}
             >
-              <td className="p-3">
+              <td className="p-3 text-slate-900">
                 {r.fechaCreacion ? new Date(r.fechaCreacion).toLocaleDateString('es-EC') : '—'}
               </td>
-              <td className="p-3">{r.laboratorioNombre || '—'}</td>
-              <td className="p-3">{r.userEmail || '—'}</td>
-              <td className="p-3">{r.titulo || '—'}</td>
+              <td className="p-3 text-slate-900">{r.laboratorioNombre || '—'}</td>
+              <td className="p-3 text-slate-700">{r.userEmail || '—'}</td>
+              <td className="p-3 text-slate-900 font-medium">{r.titulo || '—'}</td>
               <td className="p-3">
                 <EstadoSelect value={r.estado} onChange={(estado) => onChangeEstado(r._id, estado)} />
               </td>
@@ -35,7 +35,7 @@ export default function ReportesTable({ reportes, onRowClick, onChangeEstado }) 
 
           {reportes.length === 0 && (
             <tr>
-              <td colSpan={5} className="p-8 text-center text-gray-500 italic">
+              <td colSpan={5} className="p-8 text-center text-slate-600 italic">
                 No hay reportes con esos filtros.
               </td>
             </tr>

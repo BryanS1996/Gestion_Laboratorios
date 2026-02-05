@@ -13,13 +13,13 @@ export default function ReportFormCard({
 }) {
   return (
     <Card className="p-8 h-fit sticky top-6">
-      <div className="flex items-center gap-3 mb-6 text-red-600 border-b border-slate-100 pb-4">
+      <div className="flex items-center gap-3 mb-6 text-red-600 border-b border-slate-200 pb-4">
         <div className="bg-red-100 p-2 rounded-lg">
           <AlertTriangle size={24} />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Reportar Incidente</h2>
-          <p className="text-sm text-slate-500">Selecciona una reserva y describe el problema</p>
+          <h2 className="text-2xl font-bold text-slate-900">Reportar Incidente</h2>
+          <p className="text-sm text-slate-600">Selecciona una reserva y describe el problema</p>
         </div>
       </div>
 
@@ -57,11 +57,11 @@ export default function ReportFormCard({
         />
 
         <div>
-          <label className="label block mb-1">Imagen (opcional)</label>
-          <input type="file" accept="image/*" onChange={onImageChange} />
+          <label className="text-sm font-medium text-slate-700 block mb-1">Imagen (opcional)</label>
+          <input type="file" accept="image/*" onChange={onImageChange} className="text-slate-700" />
           {selectedImage && (
-            <p className="mt-2 text-xs text-slate-500">
-              Seleccionada: <strong>{selectedImage.name}</strong>
+            <p className="mt-2 text-xs text-slate-600">
+              Seleccionada: <strong className="text-slate-900">{selectedImage.name}</strong>
             </p>
           )}
         </div>

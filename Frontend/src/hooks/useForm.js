@@ -11,7 +11,7 @@ export const useForm = (initialValues) => {
     }));
   };
 
-  const reset = () => setValues(initialValues);
+  const resetForm = () => setValues(initialValues);
 
   const setValue = (name, value) => {
     setValues(prev => ({
@@ -23,7 +23,7 @@ export const useForm = (initialValues) => {
   return {
     values,
     handleChange,
-    reset,
+    resetForm,
     setValue,
   };
 };

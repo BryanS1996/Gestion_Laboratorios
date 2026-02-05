@@ -10,13 +10,13 @@ export default function ReservationsMobileList({
   return (
     <div className="grid grid-cols-1 gap-4 lg:hidden">
       {reservations.map((r) => (
-        <Card key={r.id} className="p-5 rounded-2xl border border-slate-100 flex flex-col gap-3">
+        <Card key={r.id} className="p-5 rounded-2xl flex flex-col gap-3">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="font-bold text-lg text-slate-800">{r.labName}</h3>
-              <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+              <h3 className="font-bold text-lg text-slate-900">{r.labName}</h3>
+              <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
                 <Calendar size={14} /> {r.date}
-                <span className="text-slate-300">|</span>
+                <span className="text-slate-400">|</span>
                 <Clock size={14} /> {r.time}
               </div>
             </div>

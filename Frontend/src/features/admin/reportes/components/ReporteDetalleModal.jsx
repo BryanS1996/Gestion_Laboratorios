@@ -12,8 +12,8 @@ export default function ReporteDetalleModal({ reporte, onClose }) {
     reporte?.estado === "pendiente"
       ? "yellow"
       : reporte?.estado === "revisado"
-      ? "blue"
-      : "green";
+        ? "blue"
+        : "green";
 
   return (
     <Modal
@@ -22,14 +22,14 @@ export default function ReporteDetalleModal({ reporte, onClose }) {
       onClose={onClose}
       maxWidthClassName="max-w-lg"
     >
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-slate-600 mb-4">
         Reporte generado el{" "}
         {reporte?.fechaCreacion
           ? new Date(reporte.fechaCreacion).toLocaleString("es-EC")
           : "—"}
       </p>
 
-      <div className="space-y-3 text-sm">
+      <div className="space-y-3 text-sm text-slate-700">
         <div>
           <span className="font-semibold">Usuario:</span> {reporte?.userEmail || "—"}
         </div>
@@ -42,15 +42,15 @@ export default function ReporteDetalleModal({ reporte, onClose }) {
           <Badge variant={badgeVariant}>{reporte?.estado || "—"}</Badge>
         </div>
         <div>
-          <span className="font-semibold">Descripción:</span>
-          <p className="mt-1 text-gray-700">{reporte?.descripcion || "—"}</p>
+          <span className="font-semibold text-slate-900">Descripción:</span>
+          <p className="mt-1 text-slate-700">{reporte?.descripcion || "—"}</p>
         </div>
       </div>
 
       {reporte?.imageKey && isLikelyUrl(reporte.imageKey) && (
         <div className="mt-4">
-          <p className="font-semibold text-sm mb-1">Imagen adjunta:</p>
-          <img src={reporte.imageKey} alt="Reporte" className="rounded border max-h-48" />
+          <p className="font-semibold text-sm mb-1 text-slate-900">Imagen adjunta:</p>
+          <img src={reporte.imageKey} alt="Reporte" className="rounded border max-h-48 w-full object-contain" />
         </div>
       )}
     </Modal>

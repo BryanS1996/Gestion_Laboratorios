@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useForm } from '../../../hooks/useForm';
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 export function useRegisterPage() {
   const { register, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const isSubmitting = useRef(false);
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,14 +21,22 @@ export function useRegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Prevent double submission
+    if (isSubmitting.current) {
+      return;
+    }
+
     setError('');
     setLoading(true);
+    isSubmitting.current = true;
 
     if (values.password !== values.confirmPassword) {
       const msg = 'Las contraseñas no coinciden';
       setError(msg);
       toast.error(msg);
       setLoading(false);
+      isSubmitting.current = false;
       return;
     }
 
@@ -36,6 +45,7 @@ export function useRegisterPage() {
       setError(msg);
       toast.error(msg);
       setLoading(false);
+      isSubmitting.current = false;
       return;
     }
 
@@ -44,14 +54,13 @@ export function useRegisterPage() {
 
       toast.success('Cuenta creada correctamente 🎉');
       resetForm();
+
       navigate('/login');
 
     } catch (err) {
-      console.error('Register error:', err);
-
       let message = 'Error al crear la cuenta';
 
-      // 🔥 Firebase error mapping (CLAVE)
+      // Firebase error mapping
       if (err.code === 'auth/email-already-in-use') {
         message = 'El correo ya está registrado';
       } else if (err.code === 'auth/weak-password') {
@@ -65,6 +74,7 @@ export function useRegisterPage() {
 
     } finally {
       setLoading(false);
+      isSubmitting.current = false;
     }
   };
 
@@ -77,7 +87,6 @@ export function useRegisterPage() {
       toast.success('Cuenta creada con Google 🎉');
       navigate('/');
     } catch (err) {
-      console.error('Google register error:', err);
       const msg = 'No se pudo registrar con Google';
       setError(msg);
       toast.error(msg);

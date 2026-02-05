@@ -8,7 +8,7 @@ export default function ExportControls({
 }) {
   return (
     <div className="flex flex-col md:flex-row md:items-center gap-3 bg-white border rounded-xl p-3">
-      <div className="text-sm text-gray-600">Exportar reservas a PDF:</div>
+      <div className="text-sm text-slate-900 font-medium">Exportar reservas a PDF:</div>
 
       <div className="flex items-center gap-2">
         <Select
@@ -31,7 +31,7 @@ export default function ExportControls({
         </Button>
       </div>
 
-      <div className="md:ml-auto text-xs text-gray-500">
+      <div className="md:ml-auto text-xs text-slate-600">
         Usa la fecha seleccionada como base del rango
       </div>
     </div>

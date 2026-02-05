@@ -25,8 +25,8 @@ export default function CatalogPage() {
 
   return (
     <CatalogShell>
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">Catálogo de laboratorios</h1>
-      <p className="text-sm text-slate-600 mb-6">Selecciona fecha y reserva un horario disponible.</p>
+      <h1 className="text-2xl font-bold text-white mb-2">Catálogo de laboratorios</h1>
+      <p className="text-sm text-slate-300 mb-6">Selecciona fecha y reserva un horario disponible.</p>
 
       <CatalogFilters
         search={state.search}

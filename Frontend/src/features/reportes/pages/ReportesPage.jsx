@@ -28,6 +28,13 @@ export default function ReportesPage() {
       return;
     }
 
+    // Validate that title only contains letters and spaces
+    const validTitleRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    if (!validTitleRegex.test(form.titulo)) {
+      toast.error("⚠️ El título solo puede contener letras y espacios.");
+      return;
+    }
+
     const reserva = reservas.find((r) => r.id === form.reservaSeleccionada);
     if (!reserva) {
       toast.error("Selecciona una reserva válida.");
@@ -74,7 +81,7 @@ export default function ReportesPage() {
 
         <div className="space-y-4">
           {(loadingReservas || loadingReportes) && (
-            <Card className="p-6 text-slate-600 inline-flex items-center gap-2">
+            <Card className="p-6 text-slate-200 inline-flex items-center gap-2">
               <Spinner />
               <span>Cargando...</span>
             </Card>

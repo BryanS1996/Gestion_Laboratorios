@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { DateTime } from 'luxon';
 import { ZONE } from '../../../../config/env';
 import { useDashboardStatsQuery } from './useDashboardStatsQuery';
+import { COLORS, getReservationColors } from '../../../../config/theme.config';
 
 const DEFAULT_SLOTS = [
   { label: '07:00-09:00', start: 7, end: 9 },
@@ -77,7 +78,7 @@ export function useDashboardPage() {
         {
           label: `Reservas por laboratorio (${periodoLabel})`,
           data: entries.map(([, v]) => v),
-          backgroundColor: '#2563eb',
+          backgroundColor: COLORS.chart.primary,
           borderRadius: 8,
         },
       ],
@@ -93,7 +94,7 @@ export function useDashboardPage() {
         {
           label: 'Top 5 usuarios',
           data: entries.map(([, v]) => v),
-          backgroundColor: '#16a34a',
+          backgroundColor: COLORS.chart.success,
           borderRadius: 8,
         },
       ],
@@ -120,7 +121,7 @@ export function useDashboardPage() {
         {
           label: 'Demanda por horario',
           data: Object.values(counts),
-          backgroundColor: '#9333ea',
+          backgroundColor: COLORS.chart.purple,
           borderRadius: 8,
         },
       ],
@@ -142,7 +143,7 @@ export function useDashboardPage() {
       datasets: [
         {
           data,
-          backgroundColor: otro > 0 ? ['#facc15', '#22c55e', '#ef4444', '#94a3b8'] : ['#facc15', '#22c55e', '#ef4444'],
+          backgroundColor: getReservationColors(otro > 0),
           borderWidth: 1,
         },
       ],

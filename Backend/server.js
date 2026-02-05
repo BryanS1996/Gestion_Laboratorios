@@ -48,58 +48,58 @@ app.use(express.urlencoded({ extended: true }));
    REQUEST LOGGING
 ====================================================== */
 app.use((req, res, next) => {
-  const start = Date.now();
+   const start = Date.now();
 
-  res.on('finish', () => {
-    const duration = Date.now() - start;
+   res.on('finish', () => {
+      const duration = Date.now() - start;
 
-    serverLogger.info(
-      `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`,
-      { requestId: req.requestId }
-    );
-  });
+      serverLogger.info(
+         `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`,
+         { requestId: req.requestId }
+      );
+   });
 
-  next();
+   next();
 });
 
 /* ======================================================
    HEALTH CHECK
 ====================================================== */
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 /* ======================================================
    API ROUTES
 ====================================================== */
-app.use('/api/auth',         require('./routes/auth.routes'));
-app.use('/api/users',        require('./routes/userRoutes'));
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/laboratorios', require('./routes/laboratorios.routes'));
-app.use('/api/reservas',     require('./routes/reservas.routes'));
-app.use('/api/reportes',     require('./routes/reportes.routes'));
-app.use('/api/dashboard',    require('./routes/dashboard.routes'));
-app.use('/api/admin',        require('./routes/admin.routes'));
-app.use('/api/stripe',       require('./routes/stripe.routes'));
+app.use('/api/reservas', require('./routes/reservas.routes'));
+app.use('/api/reportes', require('./routes/reportes.routes'));
+app.use('/api/dashboard', require('./routes/dashboard.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
+app.use('/api/stripe', require('./routes/stripe.routes'));
 
 /* ======================================================
    ROOT API INFO
 ====================================================== */
 app.get('/api', (req, res) => {
-  res.json({
-    message: 'Laboratorios API',
-    version: '1.0.0',
-  });
+   res.json({
+      message: 'Laboratorios API',
+      version: '1.0.0',
+   });
 });
 
 /* ======================================================
    404 HANDLER
 ====================================================== */
 app.use((req, res) => {
-  res.status(404).json({
-    error: 'Endpoint not found',
-    method: req.method,
-    path: req.originalUrl,
-  });
+   res.status(404).json({
+      error: 'Endpoint not found',
+      method: req.method,
+      path: req.originalUrl,
+   });
 });
 
 /* ======================================================
@@ -112,10 +112,10 @@ app.use(errorHandler);
    START SERVER
 ====================================================== */
 app.listen(PORT, () => {
-  serverLogger.info(
-    `🚀 Server started on port ${PORT}`,
-    { requestId: 'bootstrap' }
-  );
+   serverLogger.info(
+      `🚀 Server started on port ${PORT}`,
+      { requestId: 'bootstrap' }
+   );
 });
 
 module.exports = app;

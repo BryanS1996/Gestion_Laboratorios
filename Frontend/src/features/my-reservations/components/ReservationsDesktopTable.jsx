@@ -12,26 +12,26 @@ export default function ReservationsDesktopTable({
       <table className="w-full text-left border-collapse">
         <thead className="bg-slate-50 border-b border-slate-200">
           <tr>
-            <th className="p-4 text-sm font-semibold text-slate-600">Laboratorio</th>
-            <th className="p-4 text-sm font-semibold text-slate-600">Fecha</th>
-            <th className="p-4 text-sm font-semibold text-slate-600">Hora</th>
-            <th className="p-4 text-sm font-semibold text-slate-600">Estado</th>
-            <th className="p-4 text-sm font-semibold text-slate-600 text-right">Acciones</th>
+            <th className="p-4 text-sm font-semibold text-slate-700">Laboratorio</th>
+            <th className="p-4 text-sm font-semibold text-slate-700">Fecha</th>
+            <th className="p-4 text-sm font-semibold text-slate-700">Hora</th>
+            <th className="p-4 text-sm font-semibold text-slate-700">Estado</th>
+            <th className="p-4 text-sm font-semibold text-slate-700 text-right">Acciones</th>
           </tr>
         </thead>
 
         <tbody className="divide-y divide-slate-100">
           {reservations.map((r) => (
             <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-              <td className="p-4 font-medium text-slate-800">
+              <td className="p-4 font-medium text-slate-900">
                 <div className="flex items-center gap-2">
-                  <MapPin size={16} className="text-slate-400" />
+                  <MapPin size={16} className="text-slate-500" />
                   {r.labName}
                 </div>
               </td>
 
-              <td className="p-4 text-slate-600 text-sm">{r.date}</td>
-              <td className="p-4 text-slate-600 text-sm">{r.time}</td>
+              <td className="p-4 text-slate-700 text-sm">{r.date}</td>
+              <td className="p-4 text-slate-700 text-sm">{r.time}</td>
 
               <td className="p-4">
                 <Badge className={r.statusClass}>{r.statusText}</Badge>
@@ -73,7 +73,7 @@ export default function ReservationsDesktopTable({
 
           {reservations.length === 0 && (
             <tr>
-              <td colSpan="5" className="p-8 text-center text-slate-500 italic">
+              <td colSpan="5" className="p-8 text-center text-slate-600 italic">
                 No tienes reservas registradas.
               </td>
             </tr>

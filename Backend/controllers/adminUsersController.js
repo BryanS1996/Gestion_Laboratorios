@@ -29,7 +29,8 @@ const getAdminUsers = async (req, res) => {
         return {
           uid,
           email: authUser.email,
-          role: userData.role || authUser.customClaims?.role || 'student',
+          // Prioritize Custom Claims as source of truth for role
+          role: authUser.customClaims?.role || userData.role || 'student',
           createdAt: userData.createdAt || null,
           lastLoginAt: authUser.metadata.lastSignInTime,
           isActive: !authUser.disabled,
@@ -70,7 +71,19 @@ const updateUserRole = async (req, res) => {
     const { uid } = req.params;
     const { role } = req.body;
 
+    // Update Firebase Custom Claims (source of truth)
     await admin.auth().setCustomUserClaims(uid, { role });
+
+    // Also update Firestore for consistency
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    if (userDoc.exists) {
+      await userRef.update({ role, updatedAt: new Date() });
+    } else {
+      // Create user document if it doesn't exist
+      await userRef.set({ role, createdAt: new Date(), updatedAt: new Date() });
+    }
 
     res.json({ message: 'Rol actualizado correctamente' });
   } catch (err) {

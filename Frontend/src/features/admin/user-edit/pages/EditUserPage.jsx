@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../../../hooks/useAuth';
 import { apiGet, apiPatch } from '../../../../services/apiClient';
 import { Button, Card, Select, Spinner } from '../../../../shared/components';
@@ -9,6 +11,7 @@ const EditUser = () => {
   const { uid } = useParams();
   const navigate = useNavigate();
   const { jwtToken } = useAuth();
+  const queryClient = useQueryClient();
 
   const [user, setUser] = useState(null);
   const [role, setRole] = useState('');
@@ -40,9 +43,20 @@ const EditUser = () => {
 
       // Actual admin backend route: PATCH /admin/users/:uid/role
       await apiPatch(`/admin/users/${uid}/role`, { role }, { jwtToken });
-      navigate('/admin/usuarios');
+
+      // Show success toast
+      toast.success('Rol actualizado correctamente ✅');
+
+      // Invalidate cache and wait for refetch to ensure Firebase data is synced
+      await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      await queryClient.refetchQueries({ queryKey: ['admin-users'] });
+
+      // Longer delay to ensure Firebase synchronization completes
+      setTimeout(() => {
+        navigate('/admin/usuarios');
+      }, 1000);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message || 'Error al actualizar el rol');
     } finally {
       setSaving(false);
     }
@@ -70,25 +84,25 @@ const EditUser = () => {
           Volver
         </Button>
 
-        <h1 className="text-2xl font-bold mb-6">
+        <h1 className="text-2xl font-bold mb-6 text-slate-100">
           Editar Usuario
         </h1>
 
         {/* Info */}
-        <div className="space-y-4 text-sm">
+        <div className="space-y-4 text-sm text-slate-100">
           <div>
-            <span className="font-medium">Email:</span>
-            <p>{user.email}</p>
+            <span className="font-medium text-slate-300">Email:</span>
+            <p className="text-slate-100">{user.email}</p>
           </div>
 
           <div>
-            <span className="font-medium">UID:</span>
-            <p className="text-gray-500">{user.uid}</p>
+            <span className="font-medium text-slate-300">UID:</span>
+            <p className="text-slate-400">{user.uid}</p>
           </div>
 
           <div>
-            <span className="font-medium">Última conexión:</span>
-            <p>
+            <span className="font-medium text-slate-300">Última conexión:</span>
+            <p className="text-slate-100">
               {user.lastLoginAt
                 ? new Date(user.lastLoginAt).toLocaleString()
                 : 'Nunca'}
@@ -96,19 +110,19 @@ const EditUser = () => {
           </div>
 
           <div>
-            <span className="font-medium">Reservas:</span>
-            <p>{user.reservasCount}</p>
+            <span className="font-medium text-slate-300">Reservas:</span>
+            <p className="text-slate-100">{user.reservasCount}</p>
           </div>
 
           <div>
-            <span className="font-medium">Reportes:</span>
-            <p>{user.reportesCount}</p>
+            <span className="font-medium text-slate-300">Reportes:</span>
+            <p className="text-slate-100">{user.reportesCount}</p>
           </div>
         </div>
 
         {/* Role */}
         <div className="mt-6">
-          <label className="block text-sm font-medium mb-1">
+          <label className="block text-sm font-medium mb-1 text-slate-200">
             Rol del usuario
           </label>
           <Select
@@ -117,7 +131,7 @@ const EditUser = () => {
             selectClassName="w-full"
           >
             <option value="student">Estudiante</option>
-            <option value="admin">Admin</option>
+            <option value="professor">Profesor</option>
           </Select>
         </div>
 

@@ -1,8 +1,10 @@
 export default function Card({ className = '', children, ...props }) {
-  // Card is slightly translucent so the global gradient background remains visible
+  // Light theme card with white background
+  const defaultClasses = 'bg-white border border-slate-200 rounded-2xl shadow-lg';
+
   return (
     <div
-      className={`bg-white/75 backdrop-blur border border-white/60 rounded-2xl shadow-sm ${className}`}
+      className={`${defaultClasses} ${className}`}
       {...props}
     >
       {children}

@@ -22,103 +22,109 @@ const Configuracion = () => {
   };
 
   const handleSave = async () => {
-    const toastId = toast.loading("Guardando configuración...");
+    const toastId = toast.loading("Saving configuration...");
 
     try {
-        // 🔒 aquí luego conectas al backend
-        await new Promise((res) => setTimeout(res, 800)); // simulación
+      // 🔒 Connect to backend here later
+      await new Promise((res) => setTimeout(res, 800)); // Simulation
 
-        console.log("Configuración guardada:", config);
+      console.log("Configuration saved:", config);
 
-        toast.success("Configuración guardada correctamente", {
+      toast.success("Configuration saved successfully", {
         id: toastId,
-        });
+      });
     } catch (error) {
-        toast.error("Error al guardar la configuración", {
+      toast.error("Error saving configuration", {
         id: toastId,
-        });
+      });
     }
-    };
+  };
+
+  // Reusable input style to match your screenshot (Dark bg, White text)
+  const inputClassName = "w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all";
+
+  // Reusable label style (Dark text to be visible on white card)
+  const labelClassName = "text-slate-800 font-semibold text-sm mb-2 block";
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
 
       {/* HEADER */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-white">
           Configuración del Sistema
         </h1>
-        <p className="text-slate-500 text-sm mt-1">
+        <p className="text-slate-300 text-sm mt-1">
           Define los parámetros generales del sistema de laboratorios
         </p>
       </div>
 
-      {/* GENERAL */}
-      <section className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h2 className="font-semibold text-slate-800 mb-4">
+      {/* GENERAL SETTINGS */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <h2 className="font-bold text-slate-900 mb-6 text-lg">
           Configuración General
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="label">Nombre del sistema</label>
+            <label className={labelClassName}>Nombre del sistema</label>
             <input
               name="nombreSistema"
               value={config.nombreSistema}
               onChange={handleChange}
-              className="input"
+              className={inputClassName}
             />
           </div>
 
           <div>
-            <label className="label">Correo de contacto</label>
+            <label className={labelClassName}>Correo de contacto</label>
             <input
               type="email"
               name="emailContacto"
               value={config.emailContacto}
               onChange={handleChange}
-              className="input"
+              className={inputClassName}
             />
           </div>
         </div>
       </section>
 
-      {/* HORARIOS */}
-      <section className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h2 className="font-semibold text-slate-800 mb-4">
+      {/* SCHEDULE SETTINGS */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <h2 className="font-bold text-slate-900 mb-6 text-lg">
           Horarios del Sistema
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="label">Hora de apertura</label>
+            <label className={labelClassName}>Hora de apertura</label>
             <input
               type="time"
               name="horaApertura"
               value={config.horaApertura}
               onChange={handleChange}
-              className="input"
+              className={inputClassName}
             />
           </div>
 
           <div>
-            <label className="label">Hora de cierre</label>
+            <label className={labelClassName}>Hora de cierre</label>
             <input
               type="time"
               name="horaCierre"
               value={config.horaCierre}
               onChange={handleChange}
-              className="input"
+              className={inputClassName}
             />
           </div>
 
           <div>
-            <label className="label">Duración por reserva</label>
+            <label className={labelClassName}>Duración por reserva</label>
             <select
               name="duracionReserva"
               value={config.duracionReserva}
               onChange={handleChange}
-              className="input"
+              className={inputClassName}
             >
               <option value={30}>30 minutos</option>
               <option value={60}>1 hora</option>
@@ -128,47 +134,48 @@ const Configuracion = () => {
         </div>
       </section>
 
-      {/* REGLAS */}
-      <section className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h2 className="font-semibold text-slate-800 mb-4">
+      {/* RESERVATION RULES */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <h2 className="font-bold text-slate-900 mb-6 text-lg">
           Reglas de Reservas
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
           <div>
-            <label className="label">Máx. reservas por usuario</label>
+            <label className={labelClassName}>Máx. reservas por usuario</label>
             <input
               type="number"
               min={1}
               name="maxReservasUsuario"
               value={config.maxReservasUsuario}
               onChange={handleChange}
-              className="input"
+              className={inputClassName}
             />
           </div>
 
-          <label className="flex items-center gap-3 mt-6">
+          <div className="flex items-center gap-3 mb-3">
             <input
               type="checkbox"
+              id="permitirMismoDia"
               name="permitirMismoDia"
               checked={config.permitirMismoDia}
               onChange={handleChange}
-              className="checkbox"
+              className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-slate-700">
+            <label htmlFor="permitirMismoDia" className="text-sm font-medium text-slate-700 cursor-pointer">
               Permitir reservas el mismo día
-            </span>
-          </label>
+            </label>
+          </div>
         </div>
       </section>
 
-      {/* SAVE */}
-      <div className="flex justify-end">
+      {/* SAVE BUTTON */}
+      <div className="flex justify-end pt-4">
         <button
           onClick={handleSave}
-          className="btn-primary flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-colors shadow-lg shadow-blue-900/20"
         >
-          <Save size={18} />
+          <Save size={20} />
           Guardar cambios
         </button>
       </div>

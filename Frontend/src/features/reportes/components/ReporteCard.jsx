@@ -28,16 +28,25 @@ export default function ReporteCard({
   onDelete,
 }) {
   const meta = statusMeta(reporte.estado);
-  const iso = toISODate(reporte.fecha);
+  // Use fechaCreacion instead of fecha for report creation date
+  const iso = reporte.fechaCreacion ? new Date(reporte.fechaCreacion).toISOString().split('T')[0] : null;
   const fechaLabel = iso ? formatISOToLocale(iso) : "Sin fecha";
 
   return (
     <Card className="overflow-hidden">
       <div className="p-6">
+        {/* Laboratory name with icon */}
+        {reporte.laboratorioNombre && (
+          <div className="mb-3 pb-3 border-b border-slate-200">
+            <p className="text-xs uppercase tracking-wider text-slate-600 font-semibold">Laboratorio</p>
+            <p className="text-base font-bold text-blue-600 mt-1">{reporte.laboratorioNombre}</p>
+          </div>
+        )}
+
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-800">{reporte.titulo}</h3>
-            <p className="text-sm text-slate-500 mt-1">{fechaLabel}</p>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-slate-900">{reporte.titulo}</h3>
+            <p className="text-sm text-slate-600 mt-1">{fechaLabel}</p>
           </div>
 
           <Badge className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${meta.className}`}>
@@ -46,7 +55,11 @@ export default function ReporteCard({
           </Badge>
         </div>
 
-        <p className="mt-4 text-slate-700 whitespace-pre-wrap">{reporte.descripcion}</p>
+        {/* Description/Detail */}
+        <div className="mt-4">
+          <p className="text-xs uppercase tracking-wider text-slate-600 font-semibold mb-2">Detalle</p>
+          <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{reporte.descripcion}</p>
+        </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
           {reporte.imageKey && (
@@ -72,20 +85,39 @@ export default function ReporteCard({
           </Button>
         </div>
 
-        {loadingImage && (
-          <div className="mt-3 text-sm text-slate-600 inline-flex items-center gap-2">
-            <Spinner />
-            <span>Cargando imagen...</span>
-          </div>
-        )}
+        {/* Image section - always visible if exists */}
+        {reporte.imageKey && (
+          <div className="mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs uppercase tracking-wider text-slate-600 font-semibold">Evidencia fotográfica</p>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => onToggleImage(reporte._id)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+              >
+                <ImageIcon size={14} />
+                {imageUrl ? "Ocultar" : "Mostrar"}
+                {imageUrl ? <EyeOff size={14} /> : <Eye size={14} />}
+              </Button>
+            </div>
 
-        {imageUrl && (
-          <div className="mt-4">
-            <img
-              src={imageUrl}
-              alt="Evidencia"
-              className="w-full max-h-[420px] object-contain rounded-xl border border-slate-100"
-            />
+            {loadingImage && (
+              <div className="text-sm text-slate-600 inline-flex items-center gap-2 py-4">
+                <Spinner />
+                <span>Cargando imagen...</span>
+              </div>
+            )}
+
+            {imageUrl && (
+              <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                <img
+                  src={imageUrl}
+                  alt="Evidencia del reporte"
+                  className="w-full max-h-[500px] object-contain"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

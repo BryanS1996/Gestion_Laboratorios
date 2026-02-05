@@ -1,4 +1,5 @@
 import DoughnutChartBase from '../../../shared/chart/DoughnutChart';
+import { getReservationColors } from '../../../config/theme.config';
 
 const DoughnutChart = ({ dataStats }) => {
   const pendiente = dataStats?.pendiente ?? 0;
@@ -13,7 +14,7 @@ const DoughnutChart = ({ dataStats }) => {
     datasets: [
       {
         data: [pendiente, confirmada, cancelada],
-        backgroundColor: ['#facc15', '#22c55e', '#ef4444'],
+        backgroundColor: getReservationColors(false),
         borderWidth: 1,
       },
     ],

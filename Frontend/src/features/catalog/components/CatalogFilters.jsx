@@ -70,8 +70,8 @@ export default function CatalogFilters({
         </div>
       </div>
 
-      <div className="mt-3 text-sm text-slate-500">
-        Mostrando <span className="font-medium text-slate-700">{filtered}</span> de {total} laboratorios
+      <div className="mt-3 text-sm text-slate-300">
+        Mostrando <span className="font-medium text-white">{filtered}</span> de {total} laboratorios
       </div>
     </div>
   );
