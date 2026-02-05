@@ -83,7 +83,7 @@ export default function MyReservationsPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-slate-50">
+    <div className="min-h-screen p-4 md:p-8 bg-transparent">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-bold mb-6 text-slate-800">Mis Reservas</h1>
 

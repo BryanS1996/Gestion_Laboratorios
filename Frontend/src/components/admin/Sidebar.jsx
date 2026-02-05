@@ -13,8 +13,12 @@ import { useAuth } from "../../hooks/useAuth";
 const base =
   "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-colors";
 
-const active = "bg-[#ae1b2c] text-white shadow-md shadow-red-200";
-const inactive = "text-slate-600 hover:bg-slate-100 hover:text-slate-900";
+// Updated nav styles to match the new global red/blue gradient theme
+// (No routing or business logic changed.)
+const active =
+  "bg-gradient-to-r from-rose-500 to-sky-500 text-white shadow-md shadow-sky-200";
+const inactive =
+  "text-slate-700 hover:bg-white/60 hover:backdrop-blur hover:text-slate-900";
 
 const Sidebar = ({ open, setOpen }) => {
   const { user, logout } = useAuth();
@@ -50,10 +54,11 @@ const Sidebar = ({ open, setOpen }) => {
         />
       )}
 
+      {/* Sidebar is slightly translucent to let the global gradient show through */}
       <aside
         className={`
           fixed lg:static z-50
-          w-72 bg-white border-r border-slate-200
+          w-72 bg-white/70 backdrop-blur border-r border-white/50
           px-4 py-6 flex flex-col h-screen
           transform transition-transform duration-300
           ${open ? "translate-x-0" : "-translate-x-full"}

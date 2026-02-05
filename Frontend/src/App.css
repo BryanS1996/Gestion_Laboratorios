@@ -1,63 +1,13 @@
+/*
+  App-wide utility classes (Tailwind @apply)
+  NOTE:
+  - Removed the Vite starter #root constraints (max-width/padding)
+    to allow full-screen layouts (dashboard, tables, etc.).
+  - Kept only the reusable form/button utilities used by the app.
+*/
+
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-.admin-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  color: #374151;
-  font-weight: 500;
-}
-
-.admin-link:hover {
-  background-color: #f3f4f6;
-}
-
-.admin-link.active {
-  background-color: #e0e7ff;
-  color: #1d4ed8;
+  min-height: 100vh;
 }
 
 @keyframes fadeIn {
@@ -76,8 +26,9 @@
 }
 
 .input {
-  @apply w-full px-3 py-2 rounded-xl border border-slate-300
-         focus:ring-2 focus:ring-[#ae1b2c] focus:outline-none;
+  /* Updated focus ring to match the new red/blue theme */
+  @apply w-full px-3 py-2 rounded-xl border border-slate-300 bg-white/80
+         focus:ring-2 focus:ring-sky-400 focus:border-sky-400 focus:outline-none;
 }
 
 .label {
@@ -85,12 +36,14 @@
 }
 
 .btn-primary {
-  @apply px-6 py-3 rounded-2xl bg-[#ae1b2c] text-white
-         font-medium hover:bg-[#951625]
-         transition active:scale-95;
+  /* Primary button now uses the global red → blue gradient */
+  @apply px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-sky-500 text-white
+         font-medium hover:from-rose-600 hover:to-sky-600
+         transition active:scale-95 shadow-sm;
 }
 
 .checkbox {
-  @apply rounded border-slate-300 text-[#ae1b2c]
-         focus:ring-[#ae1b2c];
+  /* Checkbox accent aligned with theme */
+  @apply rounded border-slate-300 text-rose-500
+         focus:ring-sky-400;
 }

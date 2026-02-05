@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+  Global background
+  - Applied once at the document level so every screen inherits it.
+  - This keeps the app visually consistent without touching page logic.
+*/
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* Light red → blue gradient across the whole app */
+  @apply bg-gradient-to-br from-rose-100 via-white to-sky-100 text-slate-900 antialiased;
+}

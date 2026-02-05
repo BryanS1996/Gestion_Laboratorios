@@ -5,7 +5,7 @@ export default function PagoExitosoPage() {
   usePagoExitosoPage();
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-transparent">
       <Card className="p-6 max-w-md w-full text-center">
         <div className="text-2xl font-bold text-slate-900 inline-flex items-center justify-center gap-2">
           <Spinner />

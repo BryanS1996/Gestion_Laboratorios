@@ -25,7 +25,7 @@ const AdminLayout = () => {
 
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-transparent">
       
       {/* SIDEBAR */}
       <Sidebar open={open} setOpen={setOpen} />
@@ -34,7 +34,8 @@ const AdminLayout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         
         {/* TOP BAR (mobile only) */}
-        <div className="lg:hidden flex items-center gap-2 p-4 border-b bg-white shrink-0">
+        {/* Slightly translucent top bar so the gradient remains visible */}
+        <div className="lg:hidden flex items-center gap-2 p-4 border-b border-white/60 bg-white/70 backdrop-blur shrink-0">
           <button onClick={() => setOpen(true)}>
             <Menu />
           </button>

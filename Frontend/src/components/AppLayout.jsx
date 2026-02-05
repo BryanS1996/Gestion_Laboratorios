@@ -20,7 +20,7 @@ export default function AppLayout() {
   }, [user]);
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-transparent">
       
       {/* SIDEBAR */}
       <Sidebar open={open} setOpen={setOpen} />
@@ -29,7 +29,8 @@ export default function AppLayout() {
       <div className="flex-1 flex flex-col">
         
         {/* TOP BAR MOBILE */}
-        <div className="lg:hidden flex items-center gap-2 p-4 border-b bg-white">
+        {/* Slightly translucent top bar so the gradient remains visible */}
+        <div className="lg:hidden flex items-center gap-2 p-4 border-b border-white/60 bg-white/70 backdrop-blur">
           <button onClick={() => setOpen(true)}>
             <Menu />
           </button>

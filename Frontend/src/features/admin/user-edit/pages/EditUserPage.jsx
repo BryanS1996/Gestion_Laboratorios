@@ -57,7 +57,7 @@ const EditUser = () => {
   if (error) return <p className="p-8 text-red-600">{error}</p>;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
+    <div className="min-h-screen bg-transparent p-8">
       <Card className="max-w-3xl mx-auto p-6 rounded border">
 
         {/* Return */}
