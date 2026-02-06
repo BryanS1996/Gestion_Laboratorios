@@ -1,7 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { reportesService } from "../../../services/reportes.service";
-import { captureImageMetadata } from "../../../shared/utils/imageMetadata";
+import { compressAndCaptureMetadata } from "../../../shared/utils/imageMetadata";
 import { Button, Input, Modal, Textarea } from "../../../shared/components";
 
 export default function ReportModal({
@@ -31,15 +31,19 @@ export default function ReportModal({
   };
 
   const handleImageChange = async (file) => {
-    setImage(file);
     if (file) {
       try {
-        const metadata = await captureImageMetadata(file);
+        const { compressedFile, metadata } = await compressAndCaptureMetadata(file);
+        setImage(compressedFile);
         setImageMetadata(metadata);
       } catch (error) {
-        console.error('Error capturing image metadata:', error);
+        console.error('Error processing image:', error);
+        // Fallback: usar archivo original
+        setImage(file);
+        setImageMetadata(null);
       }
     } else {
+      setImage(null);
       setImageMetadata(null);
     }
   };

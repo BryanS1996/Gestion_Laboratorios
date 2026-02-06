@@ -1,3 +1,30 @@
+import imageCompression from 'browser-image-compression';
+
+/**
+ * Compress image file before upload
+ * @param {File} file - Original image file
+ * @returns {Promise<File>} Compressed image file
+ */
+export const compressImage = async (file) => {
+    const options = {
+        maxSizeMB: 2,              // Máximo 2MB
+        maxWidthOrHeight: 1920,    // Máximo 1920px (Full HD)
+        useWebWorker: true,        // Usar Web Worker para no bloquear UI
+        fileType: 'image/jpeg'     // Convertir todo a JPEG para mejor compresión
+    };
+
+    try {
+        console.log(`📸 Comprimiendo imagen: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        const compressedFile = await imageCompression(file, options);
+        console.log(`✅ Imagen comprimida: ${compressedFile.name} (${(compressedFile.size / 1024 / 1024).toFixed(2)} MB)`);
+        return compressedFile;
+    } catch (error) {
+        console.error('❌ Error comprimiendo imagen:', error);
+        // Si falla la compresión, devolver el archivo original
+        return file;
+    }
+};
+
 /**
  * Extract technical metadata from an image file
  * @param {File} file - Image file object
@@ -80,7 +107,50 @@ export const getDeviceInfo = () => {
 };
 
 /**
- * Combine image and device metadata
+ * Compress image and capture metadata
+ * @param {File} file - Original image file
+ * @returns {Promise<{compressedFile: File, metadata: Object}>}
+ */
+export const compressAndCaptureMetadata = async (file) => {
+    try {
+        // Primero comprimir la imagen
+        const compressedFile = await compressImage(file);
+
+        // Luego capturar metadata de la imagen comprimida
+        const imageMetadata = await extractImageMetadata(compressedFile);
+        const deviceInfo = getDeviceInfo();
+
+        const metadata = {
+            ...imageMetadata,
+            ...deviceInfo,
+            // Guardar info del archivo original
+            originalSize: file.size,
+            originalFileName: file.name,
+            compressionRatio: ((1 - compressedFile.size / file.size) * 100).toFixed(2) + '%'
+        };
+
+        return {
+            compressedFile,
+            metadata
+        };
+    } catch (error) {
+        console.error('Error processing image:', error);
+        // Si falla, devolver archivo original con metadata básica
+        return {
+            compressedFile: file,
+            metadata: {
+                ...getDeviceInfo(),
+                fileName: file?.name || 'unknown',
+                fileSize: file?.size || 0,
+                mimeType: file?.type || 'unknown',
+                uploadedAt: new Date().toISOString()
+            }
+        };
+    }
+};
+
+/**
+ * Legacy function - mantener compatibilidad
  * @param {File} file - Image file object
  * @returns {Promise<Object>} Combined metadata
  */

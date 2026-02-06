@@ -8,7 +8,7 @@ import { useMisReservasQuery } from "../hooks/useMisReservasQuery";
 import { useMisReportesQuery } from "../hooks/useMisReportesQuery";
 import { useReportesActions } from "../hooks/useReportesActions";
 import { toISODate, timeRange } from "../../../shared/utils/dates";
-import { captureImageMetadata } from "../../../shared/utils/imageMetadata";
+import { compressAndCaptureMetadata } from "../../../shared/utils/imageMetadata";
 import { Card, Spinner } from "../../../shared/components";
 
 export default function ReportesPage() {
@@ -38,15 +38,19 @@ export default function ReportesPage() {
 
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0] || null;
-    setImagen(file);
     if (file) {
       try {
-        const metadata = await captureImageMetadata(file);
+        const { compressedFile, metadata } = await compressAndCaptureMetadata(file);
+        setImagen(compressedFile);
         setImagenMetadata(metadata);
       } catch (error) {
-        console.error('Error capturing image metadata:', error);
+        console.error('Error processing image:', error);
+        // Fallback: usar archivo original
+        setImagen(file);
+        setImagenMetadata(null);
       }
     } else {
+      setImagen(null);
       setImagenMetadata(null);
     }
   };
