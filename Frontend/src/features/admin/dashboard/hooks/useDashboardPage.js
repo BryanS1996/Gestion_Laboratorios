@@ -47,7 +47,7 @@ export function useDashboardPage() {
 
   const cards = useMemo(() => {
     const uniqueLabs = new Set(reservas.map((r) => r.laboratorioId).filter(Boolean)).size;
-    const uniqueUsers = new Set(reservas.map((r) => r.usuarioUid || r.usuarioEmail).filter(Boolean)).size;
+    const uniqueUsers = new Set(reservas.map((r) => r.userId || r.userEmail).filter(Boolean)).size;
     const updatedAt = stats?.updatedAt;
 
     return [
@@ -86,7 +86,7 @@ export function useDashboardPage() {
   }, [reservas, periodoLabel]);
 
   const chartTopUsuarios = useMemo(() => {
-    const counts = countBy(reservas, (r) => r.usuarioEmail || r.usuarioUid || 'Desconocido');
+    const counts = countBy(reservas, (r) => r.userEmail || r.userId || 'Desconocido');
     const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
     return {
       labels: entries.map(([k]) => k),
