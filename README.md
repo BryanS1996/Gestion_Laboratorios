@@ -7,6 +7,11 @@ A **production-ready laboratory reservation platform** designed for academic ins
 **Live deployment on AWS EC2 with Nginx reverse proxy** following real-world DevOps and security best practices.
 
 ![Laboratory Catalog](screenshots/image1.png)
+![User Dashboard](screenshots/image2.png)
+![Admin Dashboard](screenshots/image3.png)
+![User Catalog](screenshots/image4.png)
+![Laboratory Reservation Flow](screenshots/image5.png)
+
 
 ---
 
@@ -24,7 +29,6 @@ A **production-ready laboratory reservation platform** designed for academic ins
 * **Incident Reporting** - Submit reports with image uploads and automatic metadata capture
 * **Dashboard** - Personalized view of reservations and activity
 
-![User Dashboard](screenshots/image2.png)
 
 ### 🛠️ Admin Features
 
@@ -36,8 +40,6 @@ A **production-ready laboratory reservation platform** designed for academic ins
 * **Analytics** - Statistics on usage, popular labs, top users, and revenue
 * **System Configuration** - Manage operating hours and reservation rules
 * **Search & Filters** - Debounced search with advanced filtering
-
-![Admin Dashboard](screenshots/image3.png)
 
 ---
 
@@ -97,7 +99,7 @@ A **production-ready laboratory reservation platform** designed for academic ins
 - Winston for logging
 
 **Infrastructure:**
-- AWS EC2 (Ubuntu 22.04 LTS)
+- AWS EC2 (Amazon Linux 2023)
 - Nginx (reverse proxy + SSL)
 - Docker & Docker Compose
 - Firebase (Authentication & Firestore)
@@ -298,8 +300,6 @@ docker run -d -p 27017:27017 mongo:latest
 - **API Health:** http://localhost:5000/health
 - **Mongo Express:** http://localhost:8081 (dev only)
 
-![Laboratory Reservation Flow](screenshots/image5.png)
-
 ---
 
 ## ☁️ AWS EC2 Production Deployment
@@ -327,7 +327,7 @@ docker run -d -p 27017:27017 mongo:latest
 
 ```bash
 # 1. SSH into your EC2 instance
-ssh -i your-key.pem ubuntu@<EC2_PUBLIC_IP>
+ssh -i your-key.pem ec2-user@<EC2_PUBLIC_IP>
 
 # 2. Update system
 sudo apt update && sudo apt upgrade -y
@@ -387,7 +387,9 @@ server {
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
     }
-    
+    > In production, the frontend is served as a static build via Docker and Nginx. Port 5173 is only used during local development.
+
+
     # Backend API
     location /api {
         proxy_pass http://localhost:5000;
@@ -515,7 +517,7 @@ docker compose up -d --build
 ✅ **Infrastructure Security**
 - EC2 security groups (restrictive rules)
 - Nginx reverse proxy
-- SSL/TLS encryption
+- SSL/TLS with self-signed certificate (domain pending)
 - Security headers (XSS, MIME, Frame)
 - Regular system updates
 
@@ -596,6 +598,10 @@ Success:        4242 4242 4242 4242
 Decline:        4000 0000 0000 0002
 3D Secure:      4000 0027 6000 3184
 Insufficient:   4000 0000 0000 9995
+
+> ⚠️ Stripe Redirect Configuration  
+> During early testing, Stripe redirects pointed to `localhost` due to development environment variables. In production, this is resolved by configuring `CLIENT_URL` with the Elastic IP or domain, ensuring correct redirection after successful payments.
+
 ```
 
 Use any future expiration date and any 3-digit CVC.
