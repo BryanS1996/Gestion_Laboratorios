@@ -79,8 +79,9 @@ exports.createCheckoutSession = async (req, res, next) => {
           quantity: 1,
         },
       ],
-      success_url: `http://localhost:5173/pago-exitoso?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `http://localhost:5173/catalogo?payment=cancelled`,
+      success_url: `${process.env.CLIENT_URL}/pago-exitoso?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/catalogo?payment=cancelled`,
+
       metadata: {
         reservaId,
         userId: uid,

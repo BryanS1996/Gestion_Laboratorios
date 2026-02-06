@@ -88,19 +88,7 @@ export default function ReporteCard({
         {/* Image section - always visible if exists */}
         {reporte.imageKey && (
           <div className="mt-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs uppercase tracking-wider text-slate-600 font-semibold">Evidencia fotográfica</p>
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => onToggleImage(reporte._id)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
-              >
-                <ImageIcon size={14} />
-                {imageUrl ? "Ocultar" : "Mostrar"}
-                {imageUrl ? <EyeOff size={14} /> : <Eye size={14} />}
-              </Button>
-            </div>
+            <p className="text-xs uppercase tracking-wider text-slate-600 font-semibold mb-3">Evidencia fotográfica</p>
 
             {loadingImage && (
               <div className="text-sm text-slate-600 inline-flex items-center gap-2 py-4">

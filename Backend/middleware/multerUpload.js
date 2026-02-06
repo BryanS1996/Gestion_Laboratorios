@@ -6,7 +6,7 @@ const storage = multer.memoryStorage();
 // Filter to accept only certain file types (optional but recommended)
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true); // Aceptar archivo
   } else {
@@ -19,7 +19,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // Máxim 10 MB
+    fileSize: 15 * 1024 * 1024 // Máximo 15 MB
   }
 });
 

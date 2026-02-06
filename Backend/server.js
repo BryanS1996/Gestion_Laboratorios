@@ -40,9 +40,10 @@ app.use(requestId);
 /* ======================================================
    BODY PARSERS (AFTER WEBHOOK)
    - These process JSON bodies for all other routes
+   - Increased limits to support image uploads with metadata
 ====================================================== */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 /* ======================================================
    REQUEST LOGGING

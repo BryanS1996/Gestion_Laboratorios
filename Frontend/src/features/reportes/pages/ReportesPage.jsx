@@ -8,6 +8,7 @@ import { useMisReservasQuery } from "../hooks/useMisReservasQuery";
 import { useMisReportesQuery } from "../hooks/useMisReportesQuery";
 import { useReportesActions } from "../hooks/useReportesActions";
 import { toISODate, timeRange } from "../../../shared/utils/dates";
+import { captureImageMetadata } from "../../../shared/utils/imageMetadata";
 import { Card, Spinner } from "../../../shared/components";
 
 export default function ReportesPage() {
@@ -18,7 +19,37 @@ export default function ReportesPage() {
   const { signedUrls, loadingImg, createReporte, deleteReporte, toggleImage, submitting } = useReportesActions(jwtToken);
 
   const [imagen, setImagen] = useState(null);
+  const [imagenMetadata, setImagenMetadata] = useState(null);
   const [form, setForm] = useState({ titulo: "", descripcion: "", reservaSeleccionada: "" });
+  const [tituloError, setTituloError] = useState("");
+
+  const handleTituloChange = (e) => {
+    const value = e.target.value;
+    // Regex: solo letras (a-z, A-Z), espacios y caracteres acentuados (á, é, í, ó, ú, ñ)
+    const regex = /^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]*$/;
+
+    if (regex.test(value)) {
+      setForm({ ...form, titulo: value });
+      setTituloError("");
+    } else {
+      setTituloError("El título solo puede contener letras y espacios");
+    }
+  };
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0] || null;
+    setImagen(file);
+    if (file) {
+      try {
+        const metadata = await captureImageMetadata(file);
+        setImagenMetadata(metadata);
+      } catch (error) {
+        console.error('Error capturing image metadata:', error);
+      }
+    } else {
+      setImagenMetadata(null);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,10 +59,8 @@ export default function ReportesPage() {
       return;
     }
 
-    // Validate that title only contains letters and spaces
-    const validTitleRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
-    if (!validTitleRegex.test(form.titulo)) {
-      toast.error("⚠️ El título solo puede contener letras y espacios.");
+    if (tituloError) {
+      toast.error("⚠️ Corrige los errores antes de enviar.");
       return;
     }
 
@@ -54,11 +83,17 @@ export default function ReportesPage() {
     fd.append("laboratorioId", reserva.laboratorioId);
     fd.append("laboratorioNombre", reserva.laboratorioNombre);
 
-    if (imagen) fd.append("imagen", imagen);
+    if (imagen) {
+      fd.append("imagen", imagen);
+      if (imagenMetadata) {
+        fd.append("imagenMetadata", JSON.stringify(imagenMetadata));
+      }
+    }
 
     await createReporte(fd);
     setForm({ titulo: "", descripcion: "", reservaSeleccionada: "" });
     setImagen(null);
+    setImagenMetadata(null);
   };
 
   const onDelete = async (reporteId) => {
@@ -73,7 +108,9 @@ export default function ReportesPage() {
           reservas={reservas}
           form={form}
           onChange={setForm}
-          onImageChange={(e) => setImagen(e.target.files?.[0] || null)}
+          onTituloChange={handleTituloChange}
+          tituloError={tituloError}
+          onImageChange={handleImageChange}
           submitting={submitting}
           onSubmit={handleSubmit}
           selectedImage={imagen}

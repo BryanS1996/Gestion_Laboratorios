@@ -151,12 +151,12 @@ const ReservationModal = ({ isOpen, onClose, lab, onReserve, jwtToken, defaultDa
                       </span>
 
                       {!s.disponible ? (
-                        s.ocupadoPorEstudiante ? (
-                          <Badge variant="yellow" className="text-[10px] font-bold px-1.5 py-0.5">
+                        s.ocupadoPorProfesor ? (
+                          <Badge variant="red" className="text-[10px] font-bold px-1.5 py-0.5">
                             Prioridad
                           </Badge>
                         ) : (
-                          <Badge variant="red" className="text-[10px] font-bold px-1.5 py-0.5">
+                          <Badge variant="yellow" className="text-[10px] font-bold px-1.5 py-0.5">
                             Ocupado
                           </Badge>
                         )

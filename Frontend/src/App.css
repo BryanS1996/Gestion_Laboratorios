@@ -60,7 +60,7 @@
 }
 
 .label {
-  @apply text-sm font-medium text-slate-200;
+  @apply text-sm font-medium text-slate-700;
 }
 
 .btn-primary {

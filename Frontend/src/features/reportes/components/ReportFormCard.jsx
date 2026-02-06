@@ -6,6 +6,8 @@ export default function ReportFormCard({
   reservas,
   form,
   onChange,
+  onTituloChange,
+  tituloError,
   onImageChange,
   submitting,
   onSubmit,
@@ -27,7 +29,8 @@ export default function ReportFormCard({
         <Input
           placeholder="Título"
           value={form.titulo}
-          onChange={(e) => onChange({ ...form, titulo: e.target.value })}
+          onChange={onTituloChange}
+          error={tituloError}
           required
         />
 

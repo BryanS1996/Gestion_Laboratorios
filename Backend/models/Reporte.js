@@ -44,6 +44,13 @@ const reporteSchema = new mongoose.Schema({
     default: null
   },
 
+  // Image metadata (technical + device info)
+  imagenMetadata: {
+    type: Object,
+    default: null,
+    required: false
+  },
+
   // Report status
   estado: {
     type: String,

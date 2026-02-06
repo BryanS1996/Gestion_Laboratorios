@@ -43,6 +43,7 @@ const crearReporte = async (req, res, next) => {
       titulo: titulo?.trim() || 'Reporte de incidente',
       descripcion,
       imageKey: null,
+      imagenMetadata: req.body.imagenMetadata || null,
       estado: 'pendiente',
       fechaCreacion: new Date()
     });

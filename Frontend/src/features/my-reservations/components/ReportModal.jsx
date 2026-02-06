@@ -1,6 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { reportesService } from "../../../services/reportes.service";
+import { captureImageMetadata } from "../../../shared/utils/imageMetadata";
 import { Button, Input, Modal, Textarea } from "../../../shared/components";
 
 export default function ReportModal({
@@ -12,11 +13,44 @@ export default function ReportModal({
 }) {
   const [form, setForm] = useState({ titulo: "", descripcion: "" });
   const [image, setImage] = useState(null);
+  const [imageMetadata, setImageMetadata] = useState(null);
   const [sending, setSending] = useState(false);
+  const [tituloError, setTituloError] = useState("");
+
+  const handleTituloChange = (e) => {
+    const value = e.target.value;
+    // Regex: solo letras (a-z, A-Z), espacios y caracteres acentuados (á, é, í, ó, ú, ñ)
+    const regex = /^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]*$/;
+
+    if (regex.test(value)) {
+      setForm((p) => ({ ...p, titulo: value }));
+      setTituloError("");
+    } else {
+      setTituloError("El título solo puede contener letras y espacios");
+    }
+  };
+
+  const handleImageChange = async (file) => {
+    setImage(file);
+    if (file) {
+      try {
+        const metadata = await captureImageMetadata(file);
+        setImageMetadata(metadata);
+      } catch (error) {
+        console.error('Error capturing image metadata:', error);
+      }
+    } else {
+      setImageMetadata(null);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
     if (!reserva?.id) return;
+    if (tituloError) {
+      toast.error("Corrige los errores antes de enviar");
+      return;
+    }
 
     setSending(true);
     try {
@@ -27,12 +61,18 @@ export default function ReportModal({
       fd.append("laboratorioId", reserva.laboratorioId);
       fd.append("laboratorioNombre", reserva.laboratorioNombre || "");
 
-      if (image) fd.append("imagen", image);
+      if (image) {
+        fd.append("imagen", image);
+        if (imageMetadata) {
+          fd.append("imagenMetadata", JSON.stringify(imageMetadata));
+        }
+      }
 
       await reportesService.create(jwtToken, fd);
       toast.success("Reporte enviado");
       setForm({ titulo: "", descripcion: "" });
       setImage(null);
+      setImageMetadata(null);
       onClose();
       onReportSent?.();
     } catch (err) {
@@ -63,7 +103,8 @@ export default function ReportModal({
         <Input
           label="Título"
           value={form.titulo}
-          onChange={(e) => setForm((p) => ({ ...p, titulo: e.target.value }))}
+          onChange={handleTituloChange}
+          error={tituloError}
           required
         />
 
@@ -81,7 +122,7 @@ export default function ReportModal({
           <input
             type="file"
             className="block w-full text-sm text-slate-500"
-            onChange={(e) => setImage(e.target.files?.[0] || null)}
+            onChange={(e) => handleImageChange(e.target.files?.[0] || null)}
             accept="image/*"
           />
         </div>
