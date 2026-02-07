@@ -1,10 +1,12 @@
 # 🧪 Laboratory Reservation Management System
 
-### Full-Stack Application | AWS EC2 + Nginx Production Deployment
+### Full-Stack Application | AWS EC2 + Nginx + Cloudflare Production Deployment
 
 A **production-ready laboratory reservation platform** designed for academic institutions at **Universidad Central del Ecuador (UCE)**. The system supports **basic and premium lab reservations**, **secure online payments**, **incident reporting with metadata**, and a **role-based admin dashboard** with real-time analytics.
 
-**Live deployment on AWS EC2 with Nginx reverse proxy** following real-world DevOps and security best practices.
+**🌐 Live Application:** [https://bryan_chileno_1.programacionwebuce.net/](https://bryan_chileno_1.programacionwebuce.net/)
+
+**Live deployment on AWS EC2 with Nginx reverse proxy + Cloudflare CDN** following real-world DevOps and security best practices.
 
 ![Laboratory Catalog](screenshots/image1.png)
 
@@ -43,37 +45,48 @@ A **production-ready laboratory reservation platform** designed for academic ins
 
 ## 🏗️ System Architecture
 
+### Production Deployment with Cloudflare CDN
+
 ```
                     User (Browser)
                           │
                           ▼
               ┌───────────────────────┐
-              │  Nginx Reverse Proxy  │
-              │   (Port 80/443)       │
+              │   Cloudflare CDN      │
+              │ (DNS + SSL + Cache)   │
               └───────────┬───────────┘
                           │
-         ┌────────────────┴────────────────┐
-         │                                 │
-         ▼                                 ▼
-┌─────────────────┐              ┌─────────────────┐
-│  Frontend (SPA) │              │  Backend API    │
-│  React + Vite   │              │  Node.js        │
-│  Port 5173      │              │  Port 5000      │
-└─────────────────┘              └────────┬────────┘
-                                          │
-                          ┌───────────────┼───────────────┐
-                          │               │               │
-                          ▼               ▼               ▼
-                    ┌──────────┐   ┌──────────┐   ┌──────────┐
-                    │ Firebase │   │ MongoDB  │   │  Stripe  │
-                    │ Auth/DB  │   │ Reports  │   │ Payments │
-                    └──────────┘   └──────────┘   └──────────┘
-                                          │
-                                          ▼
-                                  ┌──────────────┐
-                                  │ Backblaze B2 │
-                                  │ Image Storage│
-                                  └──────────────┘
+                          ▼
+              ┌───────────────────────┐
+              │     AWS EC2 t2.medium │
+              │  Ubuntu 22.04 LTS     │
+              │                       │
+              │  ┌─────────────────┐  │
+              │  │ Nginx (80/443)  │  │
+              │  └────────┬────────┘  │
+              │           │           │
+              │  ┌────────┴────────┐  │
+              │  │                 │  │
+              │  ▼                 ▼  │
+              │ ┌─────┐        ┌─────┐ │
+              │ │React│        │Node │ │
+              │ │:5173│        │:5000│ │
+              │ └─────┘        └──┬──┘ │
+              └─────────────────│──────┘
+                                │
+              ┌─────────────────┼─────────────────┐
+              │                 │                 │
+              ▼                 ▼                 ▼
+        ┌──────────┐      ┌──────────┐    ┌──────────┐
+        │ Firebase │      │ MongoDB  │    │  Stripe  │
+        │ Auth/DB  │      │ Reports  │    │ Payments │
+        └──────────┘      └────┬─────┘    └──────────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │ Backblaze B2 │
+                        │Image Storage │
+                        └──────────────┘
 ```
 
 ### Technology Stack
@@ -98,7 +111,8 @@ A **production-ready laboratory reservation platform** designed for academic ins
 
 **Infrastructure:**
 - AWS EC2 (Ubuntu 22.04 LTS)
-- Nginx (reverse proxy + SSL)
+- Cloudflare (CDN, DNS & SSL)
+- Nginx (reverse proxy)
 - Docker & Docker Compose
 - Firebase (Authentication & Firestore)
 - MongoDB (incident reports)
@@ -248,10 +262,11 @@ MONGO_URI=mongodb://mongo:27017/laboratorios
 
 **Frontend (.env)**
 ```env
+# Local Development
 VITE_API_URL=http://localhost/api
 
-# For production with nginx:
-# VITE_API_URL=https://your-domain.com/api
+# Production with Cloudflare + Nginx
+# VITE_API_URL=https://bryan_chileno_1.programacionwebuce.net/api
 
 VITE_STRIPE_PUBLIC_KEY=pk_test_...
 
@@ -293,25 +308,33 @@ docker run -d -p 27017:27017 mongo:latest
 
 ### 4. Access the Application
 
+**Local Development:**
 - **Frontend:** http://localhost:5173
 - **Backend API:** http://localhost:5000
 - **API Health:** http://localhost:5000/health
 - **Mongo Express:** http://localhost:8081 (dev only)
 
+**Production:**
+- **Live Application:** [https://bryan_chileno_1.programacionwebuce.net/](https://bryan_chileno_1.programacionwebuce.net/)
+- **API Endpoint:** https://bryan_chileno_1.programacionwebuce.net/api
+- **API Health:** https://bryan_chileno_1.programacionwebuce.net/api/health
+
 ![Laboratory Reservation Flow](screenshots/image5.png)
 
 ---
 
-## ☁️ AWS EC2 Production Deployment
+## ☁️ Production Deployment (AWS EC2 + Cloudflare)
 
 ### Infrastructure Overview
 
 **Current Production Setup:**
-- AWS EC2 Instance (t2.medium)
-- Ubuntu 22.04 LTS
-- Nginx as reverse proxy
-- SSL/TLS with Let's Encrypt
-- Docker containerized services
+- **Domain:** [bryan_chileno_1.programacionwebuce.net](https://bryan_chileno_1.programacionwebuce.net/)
+- **CDN:** Cloudflare (DNS, caching, DDoS protection)
+- **Server:** AWS EC2 Instance (t2.medium)
+- **OS:** Ubuntu 22.04 LTS
+- **Reverse Proxy:** Nginx
+- **SSL/TLS:** Cloudflare SSL + Let's Encrypt
+- **Containers:** Docker & Docker Compose
 
 ### EC2 Instance Requirements
 
@@ -349,12 +372,12 @@ sudo apt install -y certbot python3-certbot-nginx
 **Create Nginx config: `/etc/nginx/sites-available/laboratorios`**
 
 ```nginx
-# HTTP - Redirect to HTTPS
+# HTTP - Redirect to HTTPS (Cloudflare handles SSL)
 server {
     listen 80;
-    server_name your-domain.com www.your-domain.com;
+    server_name bryan_chileno_1.programacionwebuce.net;
     
-    # Allow certbot
+    # Allow certbot (backup SSL)
     location /.well-known/acme-challenge/ {
         root /var/www/html;
     }
@@ -367,11 +390,11 @@ server {
 # HTTPS
 server {
     listen 443 ssl http2;
-    server_name your-domain.com www.your-domain.com;
+    server_name bryan_chileno_1.programacionwebuce.net;
     
-    # SSL Configuration (managed by certbot)
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    # SSL Configuration (managed by certbot + Cloudflare)
+    ssl_certificate /etc/letsencrypt/live/bryan_chileno_1.programacionwebuce.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bryan_chileno_1.programacionwebuce.net/privkey.pem;
     
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -414,8 +437,8 @@ cd gestion_laboratorios
 nano Backend/.env
 nano Frontend/.env
 
-# Important: Update Frontend/.env
-# VITE_API_URL=https://your-domain.com/api
+# Important: Update Frontend/.env for production
+# VITE_API_URL=https://bryan_chileno_1.programacionwebuce.net/api
 
 # 3. Start with Docker Compose
 docker compose up -d --build
@@ -447,10 +470,34 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
+### Cloudflare Configuration
+
+**DNS Setup:**
+1. Add an A record pointing to your EC2 public IP
+2. Enable Cloudflare proxy (orange cloud icon)
+3. Configure SSL/TLS to "Full" or "Full (strict)"
+
+**Recommended Settings:**
+- **SSL/TLS Mode:** Full (strict) - for end-to-end encryption
+- **Always Use HTTPS:** Enabled
+- **Automatic HTTPS Rewrites:** Enabled
+- **Minimum TLS Version:** 1.2
+- **Browser Cache TTL:** 4 hours (for static assets)
+- **Firewall Rules:** Optional rate limiting
+
+**Security Features:**
+- DDoS protection (automatic)
+- Web Application Firewall (WAF)
+- Bot protection
+- Rate limiting for API endpoints
+
+---
+
 ### Production Checklist
 
-- [ ] Domain DNS configured to EC2 public IP
-- [ ] SSL certificate installed and auto-renewal configured
+- [x] Domain DNS configured to EC2 public IP ✅
+- [x] Cloudflare CDN enabled with SSL ✅
+- [x] SSL certificate installed and auto-renewal configured ✅
 - [ ] Environment variables configured (no test keys)
 - [ ] Firestore security rules updated
 - [ ] Stripe webhooks configured with production URL
@@ -694,10 +741,13 @@ Use conventional commits with emojis:
 Software Engineering Student | Full-Stack Developer  
 Universidad Central del Ecuador  
 
-**Tech Stack:** React · Node.js · Docker · AWS · Nginx · Firebase · Stripe · MongoDB
+**Tech Stack:** React · Node.js · Docker · AWS · Cloudflare · Nginx · Firebase · Stripe · MongoDB
 
-**Connect:**
-- GitHub: [@BryanS1996](https://github.com/BryanS1996)
+**Portfolio:**
+- 🌐 **Live Project:** [bryan_chileno_1.programacionwebuce.net](https://bryan_chileno_1.programacionwebuce.net/)
+- 💻 **GitHub:** [@BryanS1996](https://github.com/BryanS1996)
+- 📦 **Repository:** [Gestion_Laboratorios](https://github.com/BryanS1996/Gestion_Laboratorios)
+
 ---
 
 ## 📄 License
@@ -712,7 +762,8 @@ This project is open source and available for educational purposes.
 - Firebase for authentication and database services
 - Stripe for secure payment processing
 - Backblaze for reliable cloud storage
-- AWS for scalable infrastructure
+- AWS for scalable cloud infrastructure
+- Cloudflare for CDN, DNS, and security services
 - The open-source community
 
 ---
@@ -724,13 +775,14 @@ This project is open source and available for educational purposes.
 > - Private cloud storage with signed URLs
 > - Role-based access control (RBAC)
 > - Containerized deployment (Docker)
-> - Production deployment (AWS EC2 + Nginx)
-> - SSL/TLS encryption (Let's Encrypt)
+> - Production deployment (AWS EC2 + Nginx + Cloudflare)
+> - CDN and DDoS protection (Cloudflare)
+> - SSL/TLS encryption (Cloudflare + Let's Encrypt)
 > - Image metadata extraction
 > - Real-time form validation
 > - Comprehensive error handling
 
-It demonstrates proficiency in modern full-stack development, DevOps practices, cloud architecture, and production deployment.
+It demonstrates proficiency in modern full-stack development, DevOps practices, cloud architecture, CDN integration, and production deployment.
 
 ---
 
