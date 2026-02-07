@@ -318,10 +318,6 @@ docker run -d -p 27017:27017 mongo:latest
 
 **Production:**
 - **Live Application:** [https://bryan_chileno_1.programacionwebuce.net/](https://bryan_chileno_1.programacionwebuce.net/)
-- **API Endpoint:** https://bryan_chileno_1.programacionwebuce.net/api
-- **API Health:** https://bryan_chileno_1.programacionwebuce.net/api/health
-
-![Laboratory Reservation Flow](screenshots/image5.png)
 
 ---
 
