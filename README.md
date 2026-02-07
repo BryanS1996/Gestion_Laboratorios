@@ -61,7 +61,7 @@ A **production-ready laboratory reservation platform** designed for academic ins
                           ▼
               ┌───────────────────────┐
               │     AWS EC2 t2.medium │
-              │  Ubuntu 22.04 LTS     │
+              │ Amazon Linux 2023     │
               │                       │
               │  ┌─────────────────┐  │
               │  │ Nginx (80/443)  │  │
@@ -112,14 +112,9 @@ A **production-ready laboratory reservation platform** designed for academic ins
 - Winston for logging
 
 **Infrastructure:**
-<<<<<<< HEAD
-- AWS EC2 (Ubuntu 22.04 LTS)
-- Cloudflare (CDN, DNS & SSL)
-- Nginx (reverse proxy)
-=======
+
 - AWS EC2 (Amazon Linux 2023)
 - Nginx (reverse proxy + SSL)
->>>>>>> cf30168b102fc6c958e6ee9cb31bcf7e0fc6b457
 - Docker & Docker Compose
 - Firebase (Authentication & Firestore)
 - MongoDB (incident reports)
@@ -321,7 +316,6 @@ docker run -d -p 27017:27017 mongo:latest
 - **API Health:** http://localhost:5000/health
 - **Mongo Express:** http://localhost:8081 (dev only)
 
-<<<<<<< HEAD
 **Production:**
 - **Live Application:** [https://bryan_chileno_1.programacionwebuce.net/](https://bryan_chileno_1.programacionwebuce.net/)
 - **API Endpoint:** https://bryan_chileno_1.programacionwebuce.net/api
@@ -329,8 +323,6 @@ docker run -d -p 27017:27017 mongo:latest
 
 ![Laboratory Reservation Flow](screenshots/image5.png)
 
-=======
->>>>>>> cf30168b102fc6c958e6ee9cb31bcf7e0fc6b457
 ---
 
 ## ☁️ Production Deployment (AWS EC2 + Cloudflare)
